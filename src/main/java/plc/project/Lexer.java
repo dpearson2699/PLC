@@ -3,7 +3,7 @@ package plc.project;
 import java.util.ArrayList;
 import java.util.List;
 
-/** PeePeePooPoo
+/**
  * The lexer works through three main functions:
  *
  *  - {@link #lex()}, which repeatedly calls lexToken() and skips whitespace
@@ -25,7 +25,7 @@ public final class Lexer {
 
     /**
      * Repeatedly lexes the input using {@link #lexToken()}, also skipping over
-     * whitespace where appropriate. erugie
+     * whitespace where appropriate.
      */
     public List<Token> lex() {
         throw new UnsupportedOperationException(); //TODO
@@ -72,8 +72,14 @@ public final class Lexer {
      * which should be a regex. For example, {@code peek("a", "b", "c")} would
      * return true if the next characters are {@code 'a', 'b', 'c'}.
      */
-    public boolean peek(String... patterns) {
-        throw new UnsupportedOperationException(); //TODO (in Lecture)
+    public boolean peek(String... patterns) { //TODO
+        for (int i = 0; i < patterns.length; i++) {
+            if (!chars.has(i) || !String.valueOf(chars.get(i)).matches(patterns[i])) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -81,8 +87,14 @@ public final class Lexer {
      * advances the character stream past all matched characters if peek returns
      * true. Hint - it's easiest to have this method simply call peek.
      */
-    public boolean match(String... patterns) {
-        throw new UnsupportedOperationException(); //TODO (in Lecture)
+    public boolean match(String... patterns) { //TODO
+        boolean peek = peek(patterns);
+        if (peek) {
+            for (int i =0; i < patterns.length; i++) {
+                chars.advance();
+            }
+        }
+        return peek;
     }
 
     /**
