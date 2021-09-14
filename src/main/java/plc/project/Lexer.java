@@ -75,7 +75,15 @@ public final class Lexer {
     }
 
     public Token lexCharacter() {
-        throw new UnsupportedOperationException(); //TODO
+        if (match("\'")) {
+            while( match("[^'\n\r\\]") || peek("\'")) {
+                if (peek("\'")) {
+                    lexEscape();
+                }
+            }
+        }
+
+        return chars.emit(Token.Type.CHARACTER);
     }
 
     public Token lexString() {
