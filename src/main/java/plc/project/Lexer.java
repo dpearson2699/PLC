@@ -46,7 +46,7 @@ public final class Lexer {
      * This method determines the type of the next token, delegating to the
      * appropriate lex method. As such, it is best for this method to not change
      * the state of the char stream (thus, use peek not match).
-     *
+     * <p>
      * The next character should start a valid token since whitespace is handled
      * by {@link #lex()}
      */
@@ -54,7 +54,10 @@ public final class Lexer {
         if (peek("@|[A-Za-z]")) {
             return lexIdentifier();
         }
-        else if (peek("\'")) {
+        else if (peek("")) {
+            return lexNumber();
+        }
+        else if (peek()) {
             return lexCharacter();
         }
         else {
@@ -71,25 +74,21 @@ public final class Lexer {
     }
 
     public Token lexNumber() {
+//        integer ::= '0' | '-'? [1-9] [0-9]*
+//        decimal ::= '-'? ('0' | [1-9] [0-9]+) '.' [0-9]+
         throw new UnsupportedOperationException(); //TODO
     }
 
     public Token lexCharacter() {
         if (match("\'")) {
-            if (match("[^\'\n\r\\\\]")) {
-                if (match("\'")) {
-                    return chars.emit(Token.Type.CHARACTER);
-                }
-            }
-            else if (peek("\\\\", "[bnrt\'\"\\\\]")) {
-                lexEscape();
-                if (match("\'")) {
-                    return chars.emit(Token.Type.CHARACTER);
+            while( match("[^'\n\r\\]") || peek("\'")) {
+                if (peek("\'")) {
+                    lexEscape();
                 }
             }
         }
 
-        throw new ParseException("Unterminated character at index: ", chars.get(0));
+        return chars.emit(Token.Type.CHARACTER);
     }
 
     public Token lexString() {
