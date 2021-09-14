@@ -54,10 +54,7 @@ public final class Lexer {
         if (peek("@|[A-Za-z]")) {
             return lexIdentifier();
         }
-        else if (peek("")) {
-            return lexNumber();
-        }
-        else if (peek()) {
+        else if (peek("\'")) {
             return lexCharacter();
         }
         else {
@@ -79,16 +76,33 @@ public final class Lexer {
         throw new UnsupportedOperationException(); //TODO
     }
 
+    /**
+    if peek = "0"
+      if peek = "." {
+            check for decimal
+      else if
+          check for integer
+    else if peek = "-"
+        if peek = 0
+            if peek = "."
+                check for decimal
+*/
     public Token lexCharacter() {
         if (match("\'")) {
-            while( match("[^'\n\r\\]") || peek("\'")) {
-                if (peek("\'")) {
-                    lexEscape();
+            if (match("[^\'\n\r\\\\]")) {
+                if (match("\'")) {
+                    return chars.emit(Token.Type.CHARACTER);
+                }
+            }
+            else if (peek("\\\\", "[bnrt\'\"\\\\]")) {
+                lexEscape();
+                if (match("\'")) {
+                    return chars.emit(Token.Type.CHARACTER);
                 }
             }
         }
 
-        return chars.emit(Token.Type.CHARACTER);
+        throw new ParseException("Unterminated character at index: ", chars.get(0));
     }
 
     public Token lexString() {
