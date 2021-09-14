@@ -27,8 +27,19 @@ public final class Lexer {
      * Repeatedly lexes the input using {@link #lexToken()}, also skipping over
      * whitespace where appropriate.
      */
-    public List<Token> lex() {
-        throw new UnsupportedOperationException(); //TODO
+    public List<Token> lex() { //TODO
+
+        ArrayList<Token> tokenList = new ArrayList<Token>();
+        while(chars.has(0)) {
+            if (match("[ \b\n\r\t]")) {
+                chars.skip();
+            }
+            else {
+                tokenList.add(lexToken());
+            }
+        }
+
+        return tokenList;
     }
 
     /**
@@ -39,12 +50,24 @@ public final class Lexer {
      * The next character should start a valid token since whitespace is handled
      * by {@link #lex()}
      */
-    public Token lexToken() {
-        throw new UnsupportedOperationException(); //TODO
+    public Token lexToken() { //TODO
+        if (peek("@|[A-Za-z]")) {
+            return lexIdentifier();
+        }
+        else if (peek("")) {
+            return lexNumber();
+        }
+        else if (peek()) {
+            return lexCharacter();
+        }
     }
 
     public Token lexIdentifier() {
-        throw new UnsupportedOperationException(); //TODO
+        if (match("@|[A-Za-z]")) {
+            while (match("[A-Za-z0-9_-]"));
+        }
+
+        return chars.emit(Token.Type.IDENTIFIER);
     }
 
     public Token lexNumber() {
@@ -59,6 +82,9 @@ public final class Lexer {
         throw new UnsupportedOperationException(); //TODO
     }
 
+    //call inside lexString and lexChar
+    //don't call in lexToken
+    //matching on \\n
     public void lexEscape() {
         throw new UnsupportedOperationException(); //TODO
     }
