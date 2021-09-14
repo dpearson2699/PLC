@@ -54,11 +54,11 @@ public final class Lexer {
         if (peek("@|[A-Za-z]")) {
             return lexIdentifier();
         }
-        else if (peek("")) {
-            return lexNumber();
-        }
-        else if (peek()) {
+        else if (peek("\'")) {
             return lexCharacter();
+        }
+        else {
+            throw new ParseException("Unsupported character at line: ", chars.get(0));
         }
     }
 
@@ -76,14 +76,20 @@ public final class Lexer {
 
     public Token lexCharacter() {
         if (match("\'")) {
-            while( match("[^'\n\r\\]") || peek("\'")) {
-                if (peek("\'")) {
-                    lexEscape();
+            if (match("[^\'\n\r\\\\]")) {
+                if (match("\'")) {
+                    return chars.emit(Token.Type.CHARACTER);
+                }
+            }
+            else if (peek("\\\\", "[bnrt\'\"\\\\]")) {
+                lexEscape();
+                if (match("\'")) {
+                    return chars.emit(Token.Type.CHARACTER);
                 }
             }
         }
 
-        return chars.emit(Token.Type.CHARACTER);
+        throw new ParseException("Unterminated character at index: ", chars.get(0));
     }
 
     public Token lexString() {
@@ -94,7 +100,7 @@ public final class Lexer {
     //don't call in lexToken
     //matching on \\n
     public void lexEscape() {
-        throw new UnsupportedOperationException(); //TODO
+        match("\\\\", "[bnrt\'\"\\\\]");
     }
 
     public Token lexOperator() {
