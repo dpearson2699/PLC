@@ -23,6 +23,7 @@ public final class Lexer {
         chars = new CharStream(input);
     }
 
+
     /**
      * Repeatedly lexes the input using {@link #lexToken()}, also skipping over
      * whitespace where appropriate.
@@ -42,6 +43,7 @@ public final class Lexer {
         return tokenList;
     }
 
+
     /**
      * This method determines the type of the next token, delegating to the
      * appropriate lex method. As such, it is best for this method to not change
@@ -58,11 +60,13 @@ public final class Lexer {
             return lexCharacter();
         }
         else {
-            throw new ParseException("Unsupported character at line: ", chars.get(0));
+            throw new ParseException("Unsupported character at line: ", chars.index);
         }
     }
 
+
     public Token lexIdentifier() {
+//        identifier ::= '@'? [A-Za-z] [A-Za-z0-9_-]*
         if (match("@|[A-Za-z]")) {
             while (match("[A-Za-z0-9_-]"));
         }
@@ -70,12 +74,91 @@ public final class Lexer {
         return chars.emit(Token.Type.IDENTIFIER);
     }
 
+
     public Token lexNumber() {
 //        integer ::= '0' | '-'? [1-9] [0-9]*
-//        decimal ::= '-'? ('0' | [1-9] [0-9]+) '.' [0-9]+
-        throw new UnsupportedOperationException(); //TODO
-    }
+//        decimal ::= '-'? ('0' | [1-9] [0-9]*) '.' [0-9]+ *Note this is correct unlike the project specifications*
 
+        /*Checking if first number is 0*/
+        if (match("0")){
+            /*Integer*/
+            //Check if Leading Zero, if so break because it's not supposed to fail
+            zeroErrorCheck:
+            {
+                if (peek("[1-9]")) {
+//                  throw new ParseException("No leading zeros on integers", chars.index);
+                    break zeroErrorCheck;
+                }
+                /*Decimal*/
+                //What do you do if there is a decimal but then there isn't any numbers after (NOTE: DO NOT FAIL)
+                else if (peek("[.]")) {
+                    //What if next character isn't a number? Should an exception be thrown?
+                    if(peek("[.]", "[0-9]")){
+                        while (match("[0-9]")){}
+                        return chars.emit(Token.Type.DECIMAL);
+                    }
+                    else{
+                        break zeroErrorCheck;
+                    }
+                }
+                //This should only return if the number is just a 0
+                return chars.emit(Token.Type.INTEGER);
+            }
+            System.out.println("This should never be printed. If so then there is an error inside lexToken with lexNumber being called when it shouldn't. Error with FIRST DIGIT ZERO IF STATEMENT");
+        }
+
+        /*Check to see if first character is a negative*/
+        else if (match("[-]")){
+
+            //If first number is not zero...
+            if (match("[1-9]")){
+                while (match("0-9")){}
+
+                //Check if decimal
+                if (peek("[.]")){
+                    match("[.]");
+                    do {
+                        match("[0-9]");
+                    }while(match("[0-9]"));
+
+                    return chars.emit(Token.Type.DECIMAL);
+                }
+                else {
+                    return chars.emit(Token.Type.INTEGER);
+                }
+            }
+
+            //Therefore, first number (not character since that is the negative sign) must be 0 and a decimal because a negative 0 integer doesn't exist
+            else {
+                match("0", "[.]");
+                do{
+                    match("[0-9]");
+                }while(match("[0-9]"));
+
+                return chars.emit(Token.Type.DECIMAL);
+            }
+
+        }
+//        integer ::= '0' | '-'? [1-9] [0-9]*
+//        decimal ::= '-'? ('0' | [1-9] [0-9]*) '.' [0-9]+
+        /*Positive Integers & Decimals (Should be last case)*/
+        else if(match("[1-9]")){
+            while(match("[0-9]")){
+                //If number is a decimal then record decimal and keep iterating through number
+                if(peek("[.]")){
+                    match("[.]");
+                    do{
+                        match("[0-9]");
+                    }while(match("[0-9]"));
+                    return chars.emit(Token.Type.DECIMAL);
+                }
+            }
+            return chars.emit(Token.Type.INTEGER);
+        }
+
+        //This should never get thrown. If it does then there is an error inside lexToken with lexNumber being called when it shouldn't
+        throw new ParseException("This should never be printed. If so then there is an error inside lexToken with lexNumber being called when it shouldn't. Error with THE IF STATEMENT IS NOT BEING TRIGGERED: ", chars.index);
+    }
     /**
     if peek = "0"
       if peek = "." {
@@ -87,6 +170,8 @@ public final class Lexer {
             if peek = "."
                 check for decimal
 */
+
+
     public Token lexCharacter() {
         if (match("\'")) {
             if (match("[^\'\n\r\\\\]")) {
@@ -102,12 +187,14 @@ public final class Lexer {
             }
         }
 
-        throw new ParseException("Unterminated character at index: ", chars.get(0));
+        throw new ParseException("Unterminated character at index: ", chars.index);
     }
+
 
     public Token lexString() {
         throw new UnsupportedOperationException(); //TODO
     }
+
 
     //call inside lexString and lexChar
     //don't call in lexToken
@@ -119,6 +206,7 @@ public final class Lexer {
     public Token lexOperator() {
         throw new UnsupportedOperationException(); //TODO
     }
+
 
     /**
      * Returns true if the next sequence of characters match the given patterns,
@@ -135,6 +223,7 @@ public final class Lexer {
         return true;
     }
 
+
     /**
      * Returns true in the same way as {@link #peek(String...)}, but also
      * advances the character stream past all matched characters if peek returns
@@ -149,6 +238,7 @@ public final class Lexer {
         }
         return peek;
     }
+
 
     /**
      * A helper class maintaining the input string, current index of the char
