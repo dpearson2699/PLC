@@ -54,11 +54,17 @@ public final class Lexer {
         if (peek("@|[A-Za-z]")) {
             return lexIdentifier();
         }
+        else if (peek("[0-9]") || peek("-", "[1-9]") || peek("-", "0", ".", "[0-9]")) {
+            return lexNumber();
+        }
         else if (peek("\'")) {
             return lexCharacter();
         }
+        else if (peek("\"")) {
+            return lexString();
+        }
         else {
-            throw new ParseException("Unsupported character at line: ", chars.get(0));
+            return lexOperator();
         }
     }
 
@@ -71,7 +77,43 @@ public final class Lexer {
     }
 
     public Token lexNumber() {
-        throw new UnsupportedOperationException(); //TODO
+        if (match("-")) {   //handles - int/dec
+            if (match("0", ".")) {  //case where peek("-", "0", ".", "[0-9]") returns T
+                while (match("[0-9]"));
+                return chars.emit(Token.Type.DECIMAL);
+            }
+            else if (match("[1-9]")) {  //case where peek("-", "[1-9]") returns T
+                while (match("[0-9]"));
+
+                if (match(".", "[0-9]")) {  //need to check if decimal can be valid
+                    while (match("[0-9]"));
+                    return chars.emit(Token.Type.DECIMAL);
+                }
+                else {
+                    return chars.emit(Token.Type.INTEGER);
+                }
+            }
+        }
+        else if (match("[1-9]")) {  //case where peek("[1-9]") returns T; handles + int/dec
+            while (match("[0-9]"));
+
+            if (match(".", "[0-9]")) {  //need to check if decimal can be valid
+                while (match("[0-9]"));
+                return chars.emit(Token.Type.DECIMAL);
+            }
+            else {
+                return chars.emit(Token.Type.INTEGER);
+            }
+        }
+        else {  //case where peek("0") returns T
+            if (match(".", "[0-9]")) {  //need to check if decimal can be valid
+                while (match("[0-9]"));
+                return chars.emit(Token.Type.DECIMAL);
+            }
+        }
+
+        //last case: just have 0
+        return chars.emit(Token.Type.INTEGER);
     }
 
     public Token lexCharacter() {
@@ -80,31 +122,61 @@ public final class Lexer {
                 if (match("\'")) {
                     return chars.emit(Token.Type.CHARACTER);
                 }
+                else {
+                    throw new ParseException("Unterminated character at index: ", chars.index);
+                }
             }
-            else if (peek("\\\\", "[bnrt\'\"\\\\]")) {
+            else if (peek("\\\\")) {
                 lexEscape();
                 if (match("\'")) {
                     return chars.emit(Token.Type.CHARACTER);
                 }
+                else {
+                    throw new ParseException("Unterminated character at index: ", chars.index);
+                }
             }
         }
 
-        throw new ParseException("Unterminated character at index: ", chars.get(0));
+        throw new ParseException("Invalid character at index: ", chars.index);
     }
 
+    //problem: length is too big for unterminated strings
     public Token lexString() {
-        throw new UnsupportedOperationException(); //TODO
+        if (match("\"")) {
+            while(match("[^\"\n\r\\\\]") || peek("\\\\")) {
+                lexEscape();
+            };
+
+            if (match("\"")) {
+                return chars.emit(Token.Type.STRING);
+            }
+        }
+
+        throw new ParseException("Unterminated string at index: ", chars.index);
     }
 
     //call inside lexString and lexChar
     //don't call in lexToken
     //matching on \\n
+    //ex: "\a" //error on index of 'a'
     public void lexEscape() {
-        match("\\\\", "[bnrt\'\"\\\\]");
+        //only peek in else if in lexChar, then call lexEscape
+        if (match("\\\\")) {
+            if (!match( "[bnrt\'\"\\\\]")) {
+                throw new ParseException("Invalid escape sequence at index: ", chars.index);
+            }
+        }
     }
 
     public Token lexOperator() {
-        throw new UnsupportedOperationException(); //TODO
+        System.out.println("Test");
+        if (match("[!=]", "=") || match("&", "&") || match("|", "|")) {
+            return chars.emit(Token.Type.OPERATOR);
+        }
+        else {
+            chars.advance();
+            return chars.emit(Token.Type.OPERATOR);
+        }
     }
 
     /**
