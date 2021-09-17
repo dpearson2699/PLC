@@ -110,14 +110,9 @@ public final class Lexer {
                 while (match("[0-9]"));
                 return chars.emit(Token.Type.DECIMAL);
             }
-            /*
-            else if (match("0")) {
-                return chars.emit(Token.Type.INTEGER);
-            }
-             */
         }
 
-        //last case: just have 0
+        //last case: just have 0 bc java stupid
         chars.advance();
         return chars.emit(Token.Type.INTEGER);
     }
