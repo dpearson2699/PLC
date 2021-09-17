@@ -110,9 +110,15 @@ public final class Lexer {
                 while (match("[0-9]"));
                 return chars.emit(Token.Type.DECIMAL);
             }
+            /*
+            else if (match("0")) {
+                return chars.emit(Token.Type.INTEGER);
+            }
+             */
         }
 
         //last case: just have 0
+        chars.advance();
         return chars.emit(Token.Type.INTEGER);
     }
 
@@ -169,7 +175,6 @@ public final class Lexer {
     }
 
     public Token lexOperator() {
-        System.out.println("Test");
         if (match("[!=]", "=") || match("&", "&") || match("|", "|")) {
             return chars.emit(Token.Type.OPERATOR);
         }
