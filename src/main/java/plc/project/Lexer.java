@@ -69,7 +69,7 @@ public final class Lexer {
     }
 
     public Token lexIdentifier() {
-        if (match("@|[A-Za-z]")) {
+        if (match("[A-Za-z]") || match("@", "[A-Za-z0-9_-]")) {
             while (match("[A-Za-z0-9_-]"));
         }
 
@@ -106,7 +106,7 @@ public final class Lexer {
             }
         }
         else {  //case where peek("0") returns T
-            if (match(".", "[0-9]")) {  //need to check if decimal can be valid
+            if (match("0", ".", "[0-9]")) {  //need to check if decimal can be valid
                 while (match("[0-9]"));
                 return chars.emit(Token.Type.DECIMAL);
             }

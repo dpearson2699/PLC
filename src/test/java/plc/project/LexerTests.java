@@ -22,8 +22,13 @@ public class LexerTests {
         return Stream.of(
                 Arguments.of("Alphabetic", "getName", true),
                 Arguments.of("Alphanumeric", "thelegend27", true),
+                Arguments.of("Leading @", "@identifier_-", true),
+                Arguments.of("Mixed Characters", "@ident1_ident2-ident3", true),
                 Arguments.of("Leading Hyphen", "-five", false),
-                Arguments.of("Leading Digit", "1fish2fish3fishbluefish", false)
+                Arguments.of("Leading Digit", "1fish2fish3fishbluefish", false),
+                Arguments.of("Leading Underscore", "_testing", false),
+                Arguments.of("Just an @", "@", false),
+                Arguments.of("Just a digit", "0", false)
         );
     }
 
@@ -60,7 +65,9 @@ public class LexerTests {
                 Arguments.of("Just a 0.0", "0.0", true),
                 Arguments.of("Trailing 0", "0.00000000001000000", true),
                 Arguments.of("Trailing Decimal", "1.", false),
-                Arguments.of("Leading Decimal", ".5", false)
+                Arguments.of("Leading Decimal", ".5000", false),
+                Arguments.of("Too many Leading 0", "00000.00000000001000000", false),
+                Arguments.of("Multiple Decimal Points", "0..01", false)
         );
     }
 
@@ -74,8 +81,17 @@ public class LexerTests {
         return Stream.of(
                 Arguments.of("Alphabetic", "\'c\'", true),
                 Arguments.of("Newline Escape", "\'\\n\'", true),
+                Arguments.of("Double Quote", "'\"'", true),
+                Arguments.of("Escaped Double Quote", "'\\\"'", true),
+                Arguments.of("Escaped Newline", "'\\n'", true),
                 Arguments.of("Empty", "\'\'", false),
-                Arguments.of("Multiple", "\'abc\'", false)
+                Arguments.of("Multiple", "\'abc\'", false),
+                Arguments.of("Newline", "'\n'", false),
+                Arguments.of("Backslash", "\'\\\'", false),
+                Arguments.of("Multiple Escaped", "\'\r\t\'", false),
+                Arguments.of("No Single Quotes", "a", false),
+                Arguments.of("No Single Quotes2", "\\n", false),
+                Arguments.of("Invalid Escape Sequence", "\'\\a\'", false)
         );
     }
 
@@ -90,8 +106,11 @@ public class LexerTests {
                 Arguments.of("Empty", "\"\"", true),
                 Arguments.of("Alphabetic", "\"abc\"", true),
                 Arguments.of("Newline Escape", "\"Hello,\\nWorld\"", true),
+                Arguments.of("Valid Escaped Quote", "\"\\\"\"", true),
                 Arguments.of("Unterminated", "\"unterminated", false),
-                Arguments.of("Invalid Escape", "\"invalid\\escape\"", false)
+                Arguments.of("Invalid Escape", "\"invalid\\escape\"", false),
+                Arguments.of("Invalid 3rd Quote", "\"\"\"", false),
+                Arguments.of("Invalid Escape Sequence", "\"\\a\"", false)
         );
     }
 
@@ -106,8 +125,13 @@ public class LexerTests {
         return Stream.of(
                 Arguments.of("Character", "(", true),
                 Arguments.of("Comparison", "!=", true),
+                Arguments.of("Assignment", "=", true),
+                Arguments.of("Double Equal", "==", true),
+                Arguments.of("Escaped Character", "\\", true),
                 Arguments.of("Space", " ", false),
-                Arguments.of("Tab", "\t", false)
+                Arguments.of("Tab", "\t", false),
+                Arguments.of("Single Quote", "\'", false), //throws parse exception because unterminated single quote
+                Arguments.of("Double Quote", "\"", false) //throws parse exception because unterminated double quote
         );
     }
 
@@ -133,6 +157,70 @@ public class LexerTests {
                         new Token(Token.Type.OPERATOR, ")", 21),
                         new Token(Token.Type.OPERATOR, ";", 22)
                 )),
+                Arguments.of("Example 3", "VAR i = -1 : Integer;\nVAL inc = 2 : Integer;\nFUN foo() DO\n    WHILE i != 1 DO\n        IF i > 0 DO\n            print(\"bar\");\n        END\n        i = i + inc;\n    END\nEND", Arrays.asList(
+                        //VAR i = -1 : Integer;
+                        new Token(Token.Type.IDENTIFIER, "VAR", 0),
+                        new Token(Token.Type.IDENTIFIER, "i", 4),
+                        new Token(Token.Type.OPERATOR, "=", 6),
+                        new Token(Token.Type.INTEGER, "-1", 8),
+                        new Token(Token.Type.OPERATOR, ":", 11),
+                        new Token(Token.Type.IDENTIFIER, "Integer", 13),
+                        new Token(Token.Type.OPERATOR, ";", 20),
+
+                        //VAL inc = 2 : Integer;
+                        new Token(Token.Type.IDENTIFIER, "VAL", 22),
+                        new Token(Token.Type.IDENTIFIER, "inc", 26),
+                        new Token(Token.Type.OPERATOR, "=", 30),
+                        new Token(Token.Type.INTEGER, "2", 32),
+                        new Token(Token.Type.OPERATOR, ":", 34),
+                        new Token(Token.Type.IDENTIFIER, "Integer", 36),
+                        new Token(Token.Type.OPERATOR, ";", 43),
+
+                        //DEF foo() DO
+                        new Token(Token.Type.IDENTIFIER, "FUN", 45),
+                        new Token(Token.Type.IDENTIFIER, "foo", 49),
+                        new Token(Token.Type.OPERATOR, "(", 52),
+                        new Token(Token.Type.OPERATOR, ")", 53),
+                        new Token(Token.Type.IDENTIFIER, "DO", 55),
+
+                        //WHILE i != 1 DO
+                        new Token(Token.Type.IDENTIFIER, "WHILE", 62),
+                        new Token(Token.Type.IDENTIFIER, "i", 68),
+                        new Token(Token.Type.OPERATOR, "!=", 70),
+                        new Token(Token.Type.INTEGER, "1", 73),
+                        new Token(Token.Type.IDENTIFIER, "DO", 75),
+
+                        //IF i > 0 DO
+                        new Token(Token.Type.IDENTIFIER, "IF", 86),
+                        new Token(Token.Type.IDENTIFIER, "i", 89),
+                        new Token(Token.Type.OPERATOR, ">", 91),
+                        new Token(Token.Type.INTEGER, "0", 93),
+                        new Token(Token.Type.IDENTIFIER, "DO", 95),
+
+                        //print(\"bar\");
+                        new Token(Token.Type.IDENTIFIER, "print", 110),
+                        new Token(Token.Type.OPERATOR, "(", 115),
+                        new Token(Token.Type.STRING, "\"bar\"", 116),
+                        new Token(Token.Type.OPERATOR, ")", 121),
+                        new Token(Token.Type.OPERATOR, ";", 122),
+
+                        //END
+                        new Token(Token.Type.IDENTIFIER, "END", 132),
+
+                        //i = i + inc;
+                        new Token(Token.Type.IDENTIFIER, "i",144),
+                        new Token(Token.Type.OPERATOR, "=", 146),
+                        new Token(Token.Type.IDENTIFIER, "i", 148),
+                        new Token(Token.Type.OPERATOR, "+", 150),
+                        new Token(Token.Type.IDENTIFIER, "inc", 152),
+                        new Token(Token.Type.OPERATOR, ";", 155),
+
+                        //END
+                        new Token(Token.Type.IDENTIFIER, "END", 161),
+
+                        //END
+                        new Token(Token.Type.IDENTIFIER, "END", 165)
+                )),
                 Arguments.of("Example 6", "..", Arrays.asList(
                         new Token(Token.Type.OPERATOR, ".", 0),
                         new Token(Token.Type.OPERATOR, ".", 1)
@@ -153,6 +241,10 @@ public class LexerTests {
                         new Token(Token.Type.INTEGER, "0", 1),
                         new Token(Token.Type.OPERATOR, ".", 2),
                         new Token(Token.Type.IDENTIFIER, "x", 3)
+                )),
+                Arguments.of("Example 10", "0f", Arrays.asList(
+                        new Token(Token.Type.INTEGER, "0", 0),
+                        new Token(Token.Type.IDENTIFIER, "f", 1)
                 ))
         );
     }
