@@ -60,6 +60,7 @@ public class LexerTests {
     private static Stream<Arguments> testDecimal() {
         return Stream.of(
                 Arguments.of("Multiple Digits", "123.456", true),
+                Arguments.of("Multiple Digits", "123 456", false),
                 Arguments.of("More digits", "10000110101.000100000", true),
                 Arguments.of("Negative Decimal", "-1.0", true),
                 Arguments.of("Just a 0.0", "0.0", true),

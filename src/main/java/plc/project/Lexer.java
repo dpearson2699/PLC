@@ -54,7 +54,7 @@ public final class Lexer {
         if (peek("@|[A-Za-z]")) {
             return lexIdentifier();
         }
-        else if (peek("[0-9]") || peek("-", "[1-9]") || peek("-", "0", ".", "[0-9]")) {
+        else if (peek("[0-9]") || peek("-", "[1-9]") || peek("-", "0", "\\.", "[0-9]")) {
             return lexNumber();
         }
         else if (peek("\'")) {
@@ -78,14 +78,14 @@ public final class Lexer {
 
     public Token lexNumber() {
         if (match("-")) {   //handles - int/dec
-            if (match("0", ".")) {  //case where peek("-", "0", ".", "[0-9]") returns T
+            if (match("0", "\\.")) {  //case where peek("-", "0", ".", "[0-9]") returns T
                 while (match("[0-9]"));
                 return chars.emit(Token.Type.DECIMAL);
             }
             else if (match("[1-9]")) {  //case where peek("-", "[1-9]") returns T
                 while (match("[0-9]"));
 
-                if (match(".", "[0-9]")) {  //need to check if decimal can be valid
+                if (match("\\.", "[0-9]")) {  //need to check if decimal can be valid
                     while (match("[0-9]"));
                     return chars.emit(Token.Type.DECIMAL);
                 }
@@ -97,7 +97,7 @@ public final class Lexer {
         else if (match("[1-9]")) {  //case where peek("[1-9]") returns T; handles + int/dec
             while (match("[0-9]"));
 
-            if (match(".", "[0-9]")) {  //need to check if decimal can be valid
+            if (match("\\.", "[0-9]")) {  //need to check if decimal can be valid
                 while (match("[0-9]"));
                 return chars.emit(Token.Type.DECIMAL);
             }
@@ -106,7 +106,7 @@ public final class Lexer {
             }
         }
         else {  //case where peek("0") returns T
-            if (match("0", ".", "[0-9]")) {  //need to check if decimal can be valid
+            if (match("0", "\\.", "[0-9]")) {  //need to check if decimal can be valid
                 while (match("[0-9]"));
                 return chars.emit(Token.Type.DECIMAL);
             }
