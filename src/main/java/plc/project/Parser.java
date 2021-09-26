@@ -147,8 +147,6 @@ public final class Parser {
      * Parses the {@code expression} rule.
      */
     public Ast.Expression parseExpression() throws ParseException {
-        //throw new UnsupportedOperationException(); //TODO
-        //return parsePrimaryExpression();
         return parseLogicalExpression();
     }
 
@@ -174,21 +172,54 @@ public final class Parser {
      * Parses the {@code equality-expression} rule.
      */
     public Ast.Expression parseComparisonExpression() throws ParseException {
-        throw new UnsupportedOperationException(); //TODO
+        String operator = "";
+        Ast.Expression left = parseAdditiveExpression();
+        Ast.Expression right;
+
+        while (peek("<") || peek(">") || peek("==") || peek("!=")) {
+            operator = tokens.tokens.get(0).getLiteral();
+            tokens.advance();
+            right = parseAdditiveExpression();
+            left = new Ast.Expression.Binary(operator, left, right);
+        }
+
+        return left;
     }
 
     /**
      * Parses the {@code additive-expression} rule.
      */
     public Ast.Expression parseAdditiveExpression() throws ParseException {
-        throw new UnsupportedOperationException(); //TODO
+        String operator = "";
+        Ast.Expression left = parseMultiplicativeExpression();
+        Ast.Expression right;
+
+        while (peek("+") || peek("-")) {
+            operator = tokens.tokens.get(0).getLiteral();
+            tokens.advance();
+            right = parseMultiplicativeExpression();
+            left = new Ast.Expression.Binary(operator, left, right);
+        }
+
+        return left;
     }
 
     /**
      * Parses the {@code multiplicative-expression} rule.
      */
     public Ast.Expression parseMultiplicativeExpression() throws ParseException {
-        throw new UnsupportedOperationException(); //TODO
+        String operator = "";
+        Ast.Expression left = parsePrimaryExpression();
+        Ast.Expression right;
+
+        while (peek("*") || peek("/") || peek("^")) {
+            operator = tokens.tokens.get(0).getLiteral();
+            tokens.advance();
+            right = parsePrimaryExpression();
+            left = new Ast.Expression.Binary(operator, left, right);
+        }
+
+        return left;
     }
 
     /**
