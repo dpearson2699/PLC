@@ -1,6 +1,8 @@
 package plc.project;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.ArrayList;
 
 /**
  * The parser takes the sequence of tokens emitted by the lexer and turns that
@@ -145,14 +147,27 @@ public final class Parser {
      * Parses the {@code expression} rule.
      */
     public Ast.Expression parseExpression() throws ParseException {
-        throw new UnsupportedOperationException(); //TODO
+        //throw new UnsupportedOperationException(); //TODO
+        //return parsePrimaryExpression();
+        return parseLogicalExpression();
     }
 
     /**
      * Parses the {@code logical-expression} rule.
      */
     public Ast.Expression parseLogicalExpression() throws ParseException {
-        throw new UnsupportedOperationException(); //TODO
+        String operator = "";
+        Ast.Expression left = parseComparisonExpression();
+        Ast.Expression right;
+
+        while (peek("&&") || peek("||")) {
+            operator = tokens.tokens.get(0).getLiteral();
+            tokens.advance();
+            right = parseComparisonExpression();
+            left = new Ast.Expression.Binary(operator, left, right);
+        }
+
+        return left;
     }
 
     /**
@@ -183,7 +198,26 @@ public final class Parser {
      * not strictly necessary.
      */
     public Ast.Expression parsePrimaryExpression() throws ParseException {
-        throw new UnsupportedOperationException(); //TODO
+
+        //if there is a boolean literal
+        //have a 'TRUE' identifier, produce boolean true value
+        if (match("TRUE")) {
+            return new Ast.Expression.Literal(new Boolean(true));
+        }
+        else if (match(Token.Type.IDENTIFIER)) {
+            String name = tokens.get(-1).getLiteral();
+            return new Ast.Expression.Access(Optional.empty(), name);
+        }
+        else if (match("(")) {
+            Ast.Expression expression = parseExpression();
+            if (!match(")")) {
+                throw new ParseException("Expected closing parenthesis", -1);
+            }
+        }
+        else {
+            throw new ParseException("Invalid primary expression", -1);
+        }
+        //replace -1 with the actual character index of this token (token position is meaningless, position of character that begins token has meaning)
     }
 
     /**
@@ -197,7 +231,25 @@ public final class Parser {
      * {@code peek(Token.Type.IDENTIFIER)} and {@code peek("literal")}.
      */
     private boolean peek(Object... patterns) {
-        throw new UnsupportedOperationException(); //TODO (in lecture)
+        for (int i = 0; i < patterns.length; i++) {
+            if (!tokens.has(i)) {
+                return false;
+            }
+            else if (patterns[i] instanceof Token.Type) {
+                if (patterns[i] != tokens.get(i).getType()) {
+                    return false;
+                }
+            }
+            else if (patterns[i] instanceof String) {
+                if (!(patterns[i].equals(tokens.get(i).getLiteral()))) {
+                    return false;
+                }
+            }
+            else {
+                throw new AssertionError("Invalid pattern object: " + patterns[i].getClass());
+            }
+        }
+        return true;
     }
 
     /**
@@ -205,7 +257,13 @@ public final class Parser {
      * and advances the token stream.
      */
     private boolean match(Object... patterns) {
-        throw new UnsupportedOperationException(); //TODO (in lecture)
+        boolean peek = peek(patterns);
+        if (peek) {
+            for (int i = 0; i < patterns.length; i++) {
+                tokens.advance();
+            }
+        }
+        return peek;
     }
 
     private static final class TokenStream {
