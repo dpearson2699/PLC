@@ -90,7 +90,14 @@ public final class Parser {
      * statement, then it is an expression/assignment statement.
      */
     public Ast.Statement parseStatement() throws ParseException {
-        throw new UnsupportedOperationException(); //TODO
+
+        Ast.Expression expression = parseExpression();
+        if (match("=")) {
+            return new Ast.Statement.Assignment(expression, parseExpression());
+        }
+        else {
+            return new Ast.Statement.Expression(expression);
+        }
     }
 
     /**
@@ -162,9 +169,8 @@ public final class Parser {
         Ast.Expression left = parseComparisonExpression();
         Ast.Expression right;
 
-        while (peek("&&") || peek("||")) {
-            operator = tokens.tokens.get(0).getLiteral();
-            tokens.advance();
+        while (match("&&") || match("||")) {
+            operator = tokens.get(-1).getLiteral();
             right = parseComparisonExpression();
             left = new Ast.Expression.Binary(operator, left, right);
         }
@@ -180,9 +186,8 @@ public final class Parser {
         Ast.Expression left = parseAdditiveExpression();
         Ast.Expression right;
 
-        while (peek("<") || peek(">") || peek("==") || peek("!=")) {
-            operator = tokens.tokens.get(0).getLiteral();
-            tokens.advance();
+        while (match("<") || match(">") || match("==") || match("!=")) {
+            operator = tokens.get(-1).getLiteral();
             right = parseAdditiveExpression();
             left = new Ast.Expression.Binary(operator, left, right);
         }
@@ -198,9 +203,8 @@ public final class Parser {
         Ast.Expression left = parseMultiplicativeExpression();
         Ast.Expression right;
 
-        while (peek("+") || peek("-")) {
-            operator = tokens.tokens.get(0).getLiteral();
-            tokens.advance();
+        while (match("+") || match("-")) {
+            operator = tokens.get(-1).getLiteral();
             right = parseMultiplicativeExpression();
             left = new Ast.Expression.Binary(operator, left, right);
         }
@@ -216,9 +220,8 @@ public final class Parser {
         Ast.Expression left = parsePrimaryExpression();
         Ast.Expression right;
 
-        while (peek("*") || peek("/") || peek("^")) {
-            operator = tokens.tokens.get(0).getLiteral();
-            tokens.advance();
+        while (match("*") || match("/") || match("^")) {
+            operator = tokens.get(-1).getLiteral();
             right = parsePrimaryExpression();
             left = new Ast.Expression.Binary(operator, left, right);
         }
@@ -242,20 +245,108 @@ public final class Parser {
         else if (match("TRUE")) {
             return new Ast.Expression.Literal(new Boolean(true));
         }
-        else if (match(Token.Type.IDENTIFIER)) {
-            String name = tokens.get(-1).getLiteral();
-            return new Ast.Expression.Access(Optional.empty(), name);
+        else if (match("FALSE")) {
+            return new Ast.Expression.Literal(new Boolean(false));
+        }
+        else if (match(Token.Type.INTEGER)){
+            return new Ast.Expression.Literal(new BigInteger(tokens.get(-1).getLiteral()));
+        }
+        else if (match(Token.Type.DECIMAL)){
+            return new Ast.Expression.Literal(new BigDecimal(tokens.get(-1).getLiteral()));
+        }
+        /*
+         Character values are represented with the Character class.
+         You will need to remove the surrounding single quotes (') from the literal
+         returned by the Lexer and replace any escape characters (hint, see String#replace).
+         '\' 'n' different from \n
+         "'\\n'" -> "'\n'"
+         '\n' -> 'newline char'
+
+         "''"
+         "'c'" -> "c"
+         "'\n'" -> "
+          "
+
+         NonJava: \n
+         Java: '\\n'
+         */
+        else if(match(Token.Type.CHARACTER)){
+            String character = tokens.get(-1).getLiteral();
+            character = character.substring(1, character.length()-1);
+            //CharacterIterator iterator = new StringCharacterIterator(character);
+            //'a'
+            //escape characters
+            if(character.equals("\\b")){
+                return new Ast.Expression.Literal(new Character('\b'));
+            }
+            else if(character.equals("\\n")){
+                return new Ast.Expression.Literal(new Character('\n'));
+            }
+            else if(character.equals("\\r")){
+                return new Ast.Expression.Literal(new Character('\r'));
+            }
+            else if(character.equals("\\t")){
+                return new Ast.Expression.Literal(new Character('\t'));
+            }
+            else if(character.equals("\\\'")){
+                return new Ast.Expression.Literal(new Character('\''));
+            }
+            else if(character.equals("\\\"")){
+                return new Ast.Expression.Literal(new Character('\"'));
+            }
+            else if(character.equals("\\\\")){
+                return new Ast.Expression.Literal(new Character('\\'));
+            }
+
+            //other characters
+            else{
+                return new Ast.Expression.Literal(new Character(character.charAt(0)));
+            }
         }
         else if (match("(")) {
             Ast.Expression expression = parseExpression();
             if (!match(")")) {
-                throw new ParseException("Expected closing parenthesis", -1);
+                throw new ParseException("Expected closing parenthesis", tokens.get(0).getIndex());
+            }
+            return new Ast.Expression.Group(expression);
+        }
+        else if (match(Token.Type.IDENTIFIER)) {
+            String name = tokens.get(-1).getLiteral();
+
+            if (match("(")) {   //function calls
+                ArrayList<Ast.Expression> parameters = new ArrayList<Ast.Expression>();
+
+                //when the parameters are not empty
+                if (!peek(")")) {
+                    parameters.add(parseExpression());
+                    while(match(",")) {
+                        parameters.add(parseExpression());
+                    }
+                }
+
+                if (!match(")")) {
+                    throw new ParseException("Expected closing parenthesis", tokens.get(0).getIndex());
+                }
+
+                return new Ast.Expression.Function(name, parameters);
+            }
+            else if(match("[")) {   //accessing array
+                Ast.Expression expression = parseExpression();
+                if (!match("]")) {
+                    throw new ParseException("Expected closing bracket", tokens.get(0).getIndex());
+                }
+                //return new Ast.Expression.Access()
+                //return new Ast.Expression.Access(Optional.of(new Ast.Expression.Access(Optional.empty(), )), name);
+            }
+            else {  //identifier by itself
+                return new Ast.Expression.Access(Optional.empty(), name);
             }
         }
         else {
-            throw new ParseException("Invalid primary expression", -1);
+            throw new ParseException("Invalid primary expression", tokens.get(0).getIndex());
         }
         //replace -1 with the actual character index of this token (token position is meaningless, position of character that begins token has meaning)
+        throw new ParseException("Invalid", tokens.get(0).getIndex());
     }
 
     /**

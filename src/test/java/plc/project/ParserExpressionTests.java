@@ -146,7 +146,7 @@ final class ParserExpressionTests {
                         Arrays.asList(
                                 //expr1 && expr2
                                 new Token(Token.Type.IDENTIFIER, "expr1", 0),
-                                new Token(Token.Type.IDENTIFIER, "&&", 6),
+                                new Token(Token.Type.OPERATOR, "&&", 6),
                                 new Token(Token.Type.IDENTIFIER, "expr2", 10)
                         ),
                         new Ast.Expression.Binary("&&",
