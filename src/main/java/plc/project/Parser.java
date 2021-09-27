@@ -1,5 +1,9 @@
 package plc.project;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.text.CharacterIterator;
+import java.text.StringCharacterIterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.ArrayList;
@@ -230,9 +234,12 @@ public final class Parser {
      */
     public Ast.Expression parsePrimaryExpression() throws ParseException {
 
+        if (match("NIL")){
+            return new Ast.Expression.Literal(new Boolean(null));
+        }
         //if there is a boolean literal
         //have a 'TRUE' identifier, produce boolean true value
-        if (match("TRUE")) {
+        else if (match("TRUE")) {
             return new Ast.Expression.Literal(new Boolean(true));
         }
         else if (match(Token.Type.IDENTIFIER)) {
