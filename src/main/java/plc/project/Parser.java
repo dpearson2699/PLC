@@ -303,11 +303,12 @@ public final class Parser {
                 return new Ast.Expression.Literal(new Character(character.charAt(0)));
             }
         }
-        else if (match("(")) {
+        else if (match("(")) {  //grouped expressions
             Ast.Expression expression = parseExpression();
             if (!match(")")) {
                 throw new ParseException("Expected closing parenthesis", tokens.get(0).getIndex());
             }
+
             return new Ast.Expression.Group(expression);
         }
         else if (match(Token.Type.IDENTIFIER)) {
@@ -330,13 +331,14 @@ public final class Parser {
 
                 return new Ast.Expression.Function(name, parameters);
             }
-            else if(match("[")) {   //accessing array
+            else if(match("[")) {   //list index access
                 Ast.Expression expression = parseExpression();
                 if (!match("]")) {
                     throw new ParseException("Expected closing bracket", tokens.get(0).getIndex());
                 }
-                //return new Ast.Expression.Access()
-                //return new Ast.Expression.Access(Optional.of(new Ast.Expression.Access(Optional.empty(), )), name);
+
+                //is this supposed to be optional? something like list[] is not valid
+                return new Ast.Expression.Access(Optional.of(expression), name);
             }
             else {  //identifier by itself
                 return new Ast.Expression.Access(Optional.empty(), name);
@@ -345,8 +347,8 @@ public final class Parser {
         else {
             throw new ParseException("Invalid primary expression", tokens.get(0).getIndex());
         }
-        //replace -1 with the actual character index of this token (token position is meaningless, position of character that begins token has meaning)
-        throw new ParseException("Invalid", tokens.get(0).getIndex());
+
+        //throw new ParseException("Invalid", tokens.get(0).getIndex());
     }
 
     /**
