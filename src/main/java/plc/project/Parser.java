@@ -91,12 +91,22 @@ public final class Parser {
      */
     public Ast.Statement parseStatement() throws ParseException {
 
-        Ast.Expression expression = parseExpression();
-        if (match("=")) {
-            return new Ast.Statement.Assignment(expression, parseExpression());
+        Ast.Expression receiver = parseExpression();
+        if (match("=")) {   //assignment
+
+            Ast.Expression value = parseExpression();
+            if (!match(";")) {
+                throw new ParseException("Expected semicolon", errorIndex());
+            }
+
+            return new Ast.Statement.Assignment(receiver, value);
         }
-        else {
-            return new Ast.Statement.Expression(expression);
+        else {  //function calls
+            if (!match(";")) {
+                throw new ParseException("Expected semicolon", errorIndex());
+            }
+
+            return new Ast.Statement.Expression(receiver);
         }
     }
 
@@ -178,6 +188,8 @@ public final class Parser {
         return left;
     }
 
+    //when you have things of the same priority, move right to left
+
     /**
      * Parses the {@code equality-expression} rule.
      */
@@ -238,7 +250,7 @@ public final class Parser {
     public Ast.Expression parsePrimaryExpression() throws ParseException {
 
         if (match("NIL")){
-            return new Ast.Expression.Literal(new Boolean(null));
+            return new Ast.Expression.Literal(null);
         }
         //if there is a boolean literal
         //have a 'TRUE' identifier, produce boolean true value
@@ -266,6 +278,8 @@ public final class Parser {
          "'c'" -> "c"
          "'\n'" -> "
           "
+
+          //"'\\n'"
 
          NonJava: \n
          Java: '\\n'
@@ -306,7 +320,7 @@ public final class Parser {
         else if (match("(")) {  //grouped expressions
             Ast.Expression expression = parseExpression();
             if (!match(")")) {
-                throw new ParseException("Expected closing parenthesis", tokens.get(0).getIndex());
+                throw new ParseException("Expected closing parenthesis", errorIndex());
             }
 
             return new Ast.Expression.Group(expression);
@@ -326,7 +340,7 @@ public final class Parser {
                 }
 
                 if (!match(")")) {
-                    throw new ParseException("Expected closing parenthesis", tokens.get(0).getIndex());
+                    throw new ParseException("Expected closing parenthesis", errorIndex());
                 }
 
                 return new Ast.Expression.Function(name, parameters);
@@ -334,18 +348,17 @@ public final class Parser {
             else if(match("[")) {   //list index access
                 Ast.Expression expression = parseExpression();
                 if (!match("]")) {
-                    throw new ParseException("Expected closing bracket", tokens.get(0).getIndex());
+                    throw new ParseException("Expected closing bracket", errorIndex());
                 }
 
-                //is this supposed to be optional? something like list[] is not valid
                 return new Ast.Expression.Access(Optional.of(expression), name);
             }
-            else {  //identifier by itself
+            else {
                 return new Ast.Expression.Access(Optional.empty(), name);
             }
         }
         else {
-            throw new ParseException("Invalid primary expression", tokens.get(0).getIndex());
+            throw new ParseException("Invalid primary expression", errorIndex());
         }
 
         //throw new ParseException("Invalid", tokens.get(0).getIndex());
@@ -395,6 +408,18 @@ public final class Parser {
             }
         }
         return peek;
+    }
+
+    private int errorIndex() {
+        int index;
+        if (tokens.has(0)) {
+            index = tokens.get(0).getIndex();
+        }
+        else {
+            index = tokens.get(-1).getIndex() + tokens.get(-1).getLiteral().length();
+        }
+
+        return index;
     }
 
     private static final class TokenStream {
