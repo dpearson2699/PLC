@@ -317,6 +317,23 @@ public final class Parser {
                 return new Ast.Expression.Literal(new Character(character.charAt(0)));
             }
         }
+
+        //"Hello,\\nWorld!"
+        //replace any escape characters (hint, see String#replace).
+        else if (match(Token.Type.STRING)){
+            String inputString = tokens.get(-1).getLiteral();
+            inputString = inputString.substring(1, inputString.length()-1);
+            inputString = inputString.replace("\\b", "\b");
+            inputString = inputString.replace("\\n", "\n");
+            inputString = inputString.replace("\\r", "\r");
+            inputString = inputString.replace("\\t", "\t");
+            inputString = inputString.replace("\\\'", "\'");
+            inputString = inputString.replace("\\\"", "\"");
+            inputString = inputString.replace("\\\\", "\\");
+
+            return new Ast.Expression.Literal(inputString);
+        }
+
         else if (match("(")) {  //grouped expressions
             Ast.Expression expression = parseExpression();
             if (!match(")")) {
@@ -360,8 +377,6 @@ public final class Parser {
         else {
             throw new ParseException("Invalid primary expression", errorIndex());
         }
-
-        //throw new ParseException("Invalid", tokens.get(0).getIndex());
     }
 
     /**

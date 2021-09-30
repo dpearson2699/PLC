@@ -113,6 +113,10 @@ final class ParserExpressionTests {
                                 new Token(Token.Type.OPERATOR, "=", 8),
                                 new Token(Token.Type.IDENTIFIER, "value", 10),
                                 new Token(Token.Type.OPERATOR, ";", 11)
+                        ),
+                        new Ast.Statement.Assignment(
+                                new Ast.Expression.Access(Optional.of(new Ast.Expression.Literal(new BigInteger("1"))), "name"),
+                                new Ast.Expression.Access(Optional.empty(), "value")
                         )
                 )
         );
