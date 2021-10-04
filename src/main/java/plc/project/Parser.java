@@ -181,7 +181,7 @@ public final class Parser {
      */
     public Ast.Statement parseStatement() throws ParseException {
 
-        if (peek(peek("LET"))) {
+        if (peek("LET")) {
             return parseDeclarationStatement();
         }
         else if (peek("SWITCH")) {
@@ -233,7 +233,39 @@ public final class Parser {
      * {@code IF}.
      */
     public Ast.Statement.If parseIfStatement() throws ParseException {
-        throw new UnsupportedOperationException(); //TODO
+        //'IF' expression 'DO' block ('ELSE' block)? 'END'
+        Ast.Expression condition;
+        List<Ast.Statement> thenStatements;
+        List<Ast.Statement> elseStatements;
+
+        match("IF");
+        condition = parseExpression();
+        if (!match("DO")){
+            throw new ParseException("Expected 'DO'", errorIndex());
+        }
+        else{
+            thenStatements = parseBlock();
+            if (!peek("ELSE")){
+                if(!match("END")){
+                    throw new ParseException("Expected 'END'", errorIndex());
+                }
+                else{
+                    //instantiate elseStatements as empty list since there is no ELSE attached to the IF statement
+                    elseStatements = new ArrayList<Ast.Statement>();
+                    return new Ast.Statement.If(condition, thenStatements, elseStatements);
+                }
+            }
+            else{
+                match("ELSE");
+                elseStatements = parseBlock();
+                if(!match("END")){
+                    throw new ParseException("Expected 'END'", errorIndex());
+                }
+                else{
+                    return new Ast.Statement.If(condition, thenStatements, elseStatements);
+                }
+            }
+        }
     }
 
     /**
