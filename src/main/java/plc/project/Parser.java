@@ -33,7 +33,18 @@ public final class Parser {
      * Parses the {@code source} rule.
      */
     public Ast.Source parseSource() throws ParseException {
-        throw new UnsupportedOperationException(); //TODO
+        ArrayList<Ast.Global> globals = new ArrayList<Ast.Global>();
+        ArrayList<Ast.Function> functions = new ArrayList<Ast.Function>();
+
+        while (peek("LIST") || peek("VAR") || peek("VAL")) {
+            globals.add(parseGlobal());
+        }
+
+        while (peek("FUN")) {
+            functions.add(parseFunction());
+        }
+
+        return new Ast.Source(globals, functions);
     }
 
     /**
@@ -41,7 +52,15 @@ public final class Parser {
      * next tokens start a field, aka {@code LET}.
      */
     public Ast.Global parseGlobal() throws ParseException {
-        throw new UnsupportedOperationException(); //TODO
+        if (match("LIST")) {
+
+        }
+        else if (match("VAR")) {
+
+        }
+        else {
+
+        }
     }
 
     /**
@@ -49,7 +68,29 @@ public final class Parser {
      * next token declares a list, aka {@code LIST}.
      */
     public Ast.Global parseList() throws ParseException {
-        throw new UnsupportedOperationException(); //TODO
+
+        //should we have if statements one-by-one, or match on all 3
+        //one-by-one allows for more refined error messages
+        if (!match(Token.Type.IDENTIFIER)) {
+            throw new ParseException("Expected identifier", errorIndex());
+        }
+        if (!match("=")) {
+            throw new ParseException("Expected '=' operator'", errorIndex());
+        }
+        if (!match("[")) {
+            throw new ParseException("Expected '[' operator'", errorIndex());
+        }
+
+        parseExpression();
+        while (match(",")) {
+            parseExpression();
+        }
+
+        if (!match("]")) {
+            throw new ParseException("Expected ']' operator'", errorIndex());
+        }
+
+        return new Ast.Global()
     }
 
     /**
@@ -91,22 +132,40 @@ public final class Parser {
      */
     public Ast.Statement parseStatement() throws ParseException {
 
-        Ast.Expression receiver = parseExpression();
-        if (match("=")) {   //assignment
-
-            Ast.Expression value = parseExpression();
-            if (!match(";")) {
-                throw new ParseException("Expected semicolon", errorIndex());
-            }
-
-            return new Ast.Statement.Assignment(receiver, value);
+        if (peek(peek("LET"))) {
+            return parseDeclarationStatement();
         }
-        else {  //function calls
-            if (!match(";")) {
-                throw new ParseException("Expected semicolon", errorIndex());
-            }
+        else if (peek("SWITCH")) {
+            return parseSwitchStatement();
+        }
+        else if (peek("IF")) {
+            return parseIfStatement();
+        }
+        else if (peek("WHILE")) {
+            return parseWhileStatement();
+        }
+        else if (peek("RETURN")) {
+            return parseReturnStatement();
+        }
+        else {  //have an expression by itself or assignment
 
-            return new Ast.Statement.Expression(receiver);
+            Ast.Expression receiver = parseExpression();
+            if (match("=")) {   //assignment
+
+                Ast.Expression value = parseExpression();
+                if (!match(";")) {
+                    throw new ParseException("Expected semicolon", errorIndex());
+                }
+
+                return new Ast.Statement.Assignment(receiver, value);
+            }
+            else {  //function calls
+                if (!match(";")) {
+                    throw new ParseException("Expected semicolon", errorIndex());
+                }
+
+                return new Ast.Statement.Expression(receiver);
+            }
         }
     }
 

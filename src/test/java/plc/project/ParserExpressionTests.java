@@ -101,6 +101,14 @@ final class ParserExpressionTests {
                         ),
                         null
                 ),
+                Arguments.of("Missing Value and Semicolon",
+                        Arrays.asList(
+                                //name =
+                                new Token(Token.Type.IDENTIFIER, "name", 0),
+                                new Token(Token.Type.OPERATOR, "=", 5)
+                        ),
+                        null
+                ),
                 Arguments.of("Array Assignment",
                         Arrays.asList(
                                 //name[1] = value;
