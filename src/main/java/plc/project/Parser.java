@@ -1,5 +1,6 @@
 package plc.project;
 
+import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.text.CharacterIterator;
@@ -68,29 +69,35 @@ public final class Parser {
      * next token declares a list, aka {@code LIST}.
      */
     public Ast.Global parseList() throws ParseException {
+        String name = "";
+        Ast.Expression.PlcList elements;
+        ArrayList<>;
 
         //should we have if statements one-by-one, or match on all 3
         //one-by-one allows for more refined error messages
         if (!match(Token.Type.IDENTIFIER)) {
             throw new ParseException("Expected identifier", errorIndex());
         }
+        name =
+
         if (!match("=")) {
-            throw new ParseException("Expected '=' operator'", errorIndex());
+            throw new ParseException("Expected assignment operator", errorIndex());
         }
         if (!match("[")) {
-            throw new ParseException("Expected '[' operator'", errorIndex());
+            throw new ParseException("Expected opening bracket", errorIndex());
         }
 
+        //handles identifiers in list
         parseExpression();
         while (match(",")) {
             parseExpression();
         }
 
         if (!match("]")) {
-            throw new ParseException("Expected ']' operator'", errorIndex());
+            throw new ParseException("Expected closing bracket", errorIndex());
         }
 
-        return new Ast.Global()
+        return new Ast.Global();
     }
 
     /**
@@ -114,7 +121,42 @@ public final class Parser {
      * next tokens start a method, aka {@code DEF}.
      */
     public Ast.Function parseFunction() throws ParseException {
-        throw new UnsupportedOperationException(); //TODO
+        String name = "";
+        ArrayList<String> parameters = new ArrayList<String>();
+        List<Ast.Statement> statements;
+
+        if (!match(Token.Type.IDENTIFIER)) {
+            throw new ParseException("Expected identifier", errorIndex());
+        }
+        name = tokens.get(-1).getLiteral();
+
+        if (!match("(")) {
+            throw new ParseException("Expected opening parenthesis'", errorIndex());
+        }
+
+        //handles variable amount of parameters
+        if (match(Token.Type.IDENTIFIER)) {
+            do {
+                parameters.add(tokens.get(-1).getLiteral());
+            }
+            while(match(",", Token.Type.IDENTIFIER))
+        }
+
+        if (!match(")")) {
+            throw new ParseException("Expected closing parenthesis'", errorIndex());
+        }
+        if (!match("DO")) {
+            throw new ParseException("Expected 'DO'", errorIndex());
+        }
+
+        //handles parsing statements in function's block
+        statements = parseBlock();
+
+        if (!match("END")) {
+            throw new ParseException("Expected 'END'", errorIndex());
+        }
+
+        return new Ast.Function(name, parameters, statements);
     }
 
     /**
@@ -122,7 +164,14 @@ public final class Parser {
      * preceding token indicates the opening a block.
      */
     public List<Ast.Statement> parseBlock() throws ParseException {
-        throw new UnsupportedOperationException(); //TODO
+        ArrayList<Ast.Statement> statements = new ArrayList<Ast.Statement>();
+
+        //parseFunction already handles matching on 'END'
+        while (!peek("END")) {
+            parseStatement();
+        }
+
+        return statements;
     }
 
     /**
