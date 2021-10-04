@@ -41,6 +41,7 @@ public final class Parser {
             globals.add(parseGlobal());
         }
 
+        //improvement: match instead
         while (peek("FUN")) {
             functions.add(parseFunction());
         }
@@ -53,15 +54,24 @@ public final class Parser {
      * next tokens start a field, aka {@code LET}.
      */
     public Ast.Global parseGlobal() throws ParseException {
-        if (match("LIST")) {
+        Ast.Global global;
 
+        //improvement: match
+        if (peek("LIST")) {
+            global = parseList();
         }
-        else if (match("VAR")) {
-
+        else if (peek("VAR")) {
+            global = parseMutable();
         }
         else {
-
+            global = parseImmutable();
         }
+
+        if (!match(";")) {
+            throw new ParseException("Expected semicolon", errorIndex());
+        }
+
+        return global;
     }
 
     /**
@@ -69,16 +79,17 @@ public final class Parser {
      * next token declares a list, aka {@code LIST}.
      */
     public Ast.Global parseList() throws ParseException {
-        String name = "";
-        Ast.Expression.PlcList elements;
-        ArrayList<>;
+        String name;
+        ArrayList<Ast.Expression> elements = new ArrayList<Ast.Expression>();
+
+        match("LIST");
 
         //should we have if statements one-by-one, or match on all 3
         //one-by-one allows for more refined error messages
         if (!match(Token.Type.IDENTIFIER)) {
             throw new ParseException("Expected identifier", errorIndex());
         }
-        name =
+        name = tokens.get(-1).getLiteral();
 
         if (!match("=")) {
             throw new ParseException("Expected assignment operator", errorIndex());
@@ -88,16 +99,16 @@ public final class Parser {
         }
 
         //handles identifiers in list
-        parseExpression();
-        while (match(",")) {
-            parseExpression();
+        do {
+            elements.add(parseExpression());
         }
+        while (match(","));
 
         if (!match("]")) {
             throw new ParseException("Expected closing bracket", errorIndex());
         }
 
-        return new Ast.Global();
+        return new Ast.Global(name, true, Optional.of(new Ast.Expression.PlcList(elements)));
     }
 
     /**
@@ -105,7 +116,22 @@ public final class Parser {
      * next token declares a mutable global variable, aka {@code VAR}.
      */
     public Ast.Global parseMutable() throws ParseException {
-        throw new UnsupportedOperationException(); //TODO
+        String name;
+        Optional<Ast.Expression> value = Optional.empty();
+
+        match("VAR");
+
+        if(!match(Token.Type.IDENTIFIER)) {
+            throw new ParseException("Expected identifier", errorIndex());
+        }
+        name = tokens.get(-1).getLiteral();
+
+
+        if (match("=")) {
+            value = Optional.of(parseExpression());
+        }
+
+        return new Ast.Global(name, true, value);
     }
 
     /**
@@ -113,7 +139,25 @@ public final class Parser {
      * next token declares an immutable global variable, aka {@code VAL}.
      */
     public Ast.Global parseImmutable() throws ParseException {
-        throw new UnsupportedOperationException(); //TODO
+        String name;
+        Optional<Ast.Expression> value;
+
+        match("VAL");
+
+        if(!match(Token.Type.IDENTIFIER)) {
+            throw new ParseException("Expected identifier", errorIndex());
+        }
+        name = tokens.get(-1).getLiteral();
+
+
+        if (!match("=")) {
+            throw new ParseException("Expected assignment operator", errorIndex());
+
+        }
+        value = Optional.of(parseExpression());
+
+        return new Ast.Global(name, false, value);
+
     }
 
     /**
@@ -121,7 +165,7 @@ public final class Parser {
      * next tokens start a method, aka {@code DEF}.
      */
     public Ast.Function parseFunction() throws ParseException {
-        String name = "";
+        String name;
         ArrayList<String> parameters = new ArrayList<String>();
         List<Ast.Statement> statements;
 
@@ -139,7 +183,7 @@ public final class Parser {
             do {
                 parameters.add(tokens.get(-1).getLiteral());
             }
-            while(match(",", Token.Type.IDENTIFIER))
+            while(match(",", Token.Type.IDENTIFIER));
         }
 
         if (!match(")")) {
@@ -166,9 +210,8 @@ public final class Parser {
     public List<Ast.Statement> parseBlock() throws ParseException {
         ArrayList<Ast.Statement> statements = new ArrayList<Ast.Statement>();
 
-        //parseFunction already handles matching on 'END'
-        while (!peek("END")) {
-            parseStatement();
+        while (tokens.has(0) && !peek("END") && !peek("ELSE") && !peek("DEFAULT")) {
+            statements.add(parseStatement());
         }
 
         return statements;
@@ -224,7 +267,24 @@ public final class Parser {
      * statement, aka {@code LET}.
      */
     public Ast.Statement.Declaration parseDeclarationStatement() throws ParseException {
-        throw new UnsupportedOperationException(); //TODO
+        String name;
+        Optional<Ast.Expression> value = Optional.empty();
+
+        match("LET");
+
+        if (!match(Token.Type.IDENTIFIER)) {
+            throw new ParseException("Expected identifier", errorIndex());
+        }
+        name = tokens.get(-1).getLiteral();
+
+        if (match("=")) {
+            value = Optional.of(parseExpression());
+        }
+        if (!match(";")) {
+            throw new ParseException("Expected semicolon", errorIndex());
+        }
+
+        return new Ast.Statement.Declaration(name, value);
     }
 
     /**
