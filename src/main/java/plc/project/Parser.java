@@ -386,7 +386,24 @@ public final class Parser {
      * {@code WHILE}.
      */
     public Ast.Statement.While parseWhileStatement() throws ParseException {
-        throw new UnsupportedOperationException(); //TODO
+        Ast.Expression condition;
+        List<Ast.Statement> statements;
+
+        match("WHILE");
+        condition = parseExpression();
+
+        if (!match("DO")){
+            throw new ParseException("Expected 'DO'", errorIndex());
+        }
+        else{
+            statements = parseBlock();
+            if(!match("END")){
+                throw new ParseException("Expected 'END'", errorIndex());
+            }
+            else{
+                return new Ast.Statement.While(condition, statements);
+            }
+        }
     }
 
     /**
