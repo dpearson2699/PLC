@@ -169,6 +169,8 @@ public final class Parser {
         ArrayList<String> parameters = new ArrayList<String>();
         List<Ast.Statement> statements;
 
+        match("FUN");
+
         if (!match(Token.Type.IDENTIFIER)) {
             throw new ParseException("Expected identifier", errorIndex());
         }
@@ -210,6 +212,7 @@ public final class Parser {
     public List<Ast.Statement> parseBlock() throws ParseException {
         ArrayList<Ast.Statement> statements = new ArrayList<Ast.Statement>();
 
+        //as long as we have statements, continue parsing statements until we reach an identifier signifying the ending of a block
         while (tokens.has(0) && !peek("END") && !peek("ELSE") && !peek("DEFAULT")) {
             statements.add(parseStatement());
         }
@@ -334,7 +337,27 @@ public final class Parser {
      * {@code SWITCH}.
      */
     public Ast.Statement.Switch parseSwitchStatement() throws ParseException {
-        throw new UnsupportedOperationException(); //TODO
+        Ast.Expression condition;
+        ArrayList<Ast.Statement.Case> cases = new ArrayList<Ast.Statement.Case>();
+
+        match("SWITCH");
+        condition = parseExpression();
+
+        while(peek("CASE")) {
+            cases.add(parseCaseStatement());
+        }
+
+        if(!match("DEFAULT")) {
+            throw new ParseException("Expected 'DEFAULT'", errorIndex());
+        }
+
+        parseBlock();
+
+        if(!match("END")) {
+            throw new ParseException("Expected 'END'", errorIndex());
+        }
+
+        return new Ast.Statement.Switch(condition, cases);
     }
 
     /**
@@ -343,7 +366,18 @@ public final class Parser {
      * default block of a switch statement, aka {@code CASE} or {@code DEFAULT}.
      */
     public Ast.Statement.Case parseCaseStatement() throws ParseException {
-        throw new UnsupportedOperationException(); //TODO
+        Ast.Expression value;
+        List<Ast.Statement> statements;
+
+        match("CASE");
+        value = parseExpression();
+
+        if (!match(":")) {
+            throw new ParseException("Expected colon", errorIndex());
+        }
+        statements = parseBlock();
+
+        return new Ast.Statement.Case(Optional.of(value), statements);
     }
 
     /**
@@ -361,7 +395,15 @@ public final class Parser {
      * {@code RETURN}.
      */
     public Ast.Statement.Return parseReturnStatement() throws ParseException {
-        throw new UnsupportedOperationException(); //TODO
+
+        match("RETURN");
+        Ast.Expression value = parseExpression();
+
+        if (!match(";")) {
+            throw new ParseException("Expected semicolon", errorIndex());
+        }
+
+        return new Ast.Statement.Return(value);
     }
 
     /**
