@@ -64,6 +64,63 @@ final class ParserTests {
                                         new Ast.Statement.Expression(new Ast.Expression.Access(Optional.empty(), "stmt"))
                                 )))
                         )
+                ),
+                Arguments.of("Global Function",
+                        Arrays.asList(
+                                //VAL name = expr;␊FUN name() DO stmt; END
+                                new Token(Token.Type.IDENTIFIER, "VAL", 0),
+                                new Token(Token.Type.IDENTIFIER, "name", 4),
+                                new Token(Token.Type.OPERATOR, "=", 9),
+                                new Token(Token.Type.IDENTIFIER, "expr", 11),
+                                new Token(Token.Type.OPERATOR, ";", 15),
+                                new Token(Token.Type.IDENTIFIER, "FUN", 17),
+                                new Token(Token.Type.IDENTIFIER, "name", 21),
+                                new Token(Token.Type.OPERATOR, "(", 25),
+                                new Token(Token.Type.OPERATOR, ")", 26),
+                                new Token(Token.Type.IDENTIFIER, "DO", 28),
+                                new Token(Token.Type.IDENTIFIER, "stmt", 31),
+                                new Token(Token.Type.OPERATOR, ";", 35),
+                                new Token(Token.Type.IDENTIFIER, "END", 37)
+                        ),
+                        new Ast.Source(
+                                Arrays.asList(
+                                        new Ast.Global(
+                                                "name",
+                                                false,
+                                                Optional.of(new Ast.Expression.Access(Optional.empty(), "expr"))
+                                        )
+                                ),
+                                Arrays.asList(
+                                        new Ast.Function(
+                                                "name",
+                                                Arrays.asList(),
+                                                Arrays.asList(
+                                                    new Ast.Statement.Expression(
+                                                            new Ast.Expression.Access(Optional.empty(), "stmt")
+                                                    )
+                                                )
+                                        )
+                                )
+                        )
+                ),
+                Arguments.of("Function Global",
+                        Arrays.asList(
+                                //FUN name() DO stmt; END␊VAR name = expr;
+                                new Token(Token.Type.IDENTIFIER, "FUN", 0),
+                                new Token(Token.Type.IDENTIFIER, "name", 4),
+                                new Token(Token.Type.OPERATOR, "(", 8),
+                                new Token(Token.Type.OPERATOR, ")", 9),
+                                new Token(Token.Type.IDENTIFIER, "DO", 11),
+                                new Token(Token.Type.IDENTIFIER, "stmt", 14),
+                                new Token(Token.Type.OPERATOR, ";", 18),
+                                new Token(Token.Type.IDENTIFIER, "END", 20),
+                                new Token(Token.Type.IDENTIFIER, "VAL", 24),
+                                new Token(Token.Type.IDENTIFIER, "name", 28),
+                                new Token(Token.Type.OPERATOR, "=", 33),
+                                new Token(Token.Type.IDENTIFIER, "expr", 35),
+                                new Token(Token.Type.OPERATOR, ";", 39)
+                        ),
+                        null
                 )
         );
     }
@@ -222,6 +279,33 @@ final class ParserTests {
         );
     }
 */
+    @ParameterizedTest
+    @MethodSource
+    void testSwitchStatement(String test, List<Token> tokens, Ast.Statement.Switch expected) {
+        test(tokens, expected, Parser::parseStatement);
+    }
+
+    //WIP
+    private static Stream<Arguments> testSwitchStatement() {
+        return Stream.of(
+                Arguments.of("Switch",
+                        Arrays.asList(
+                                //SWITCH expr1 CASE expr2 : stmt1; CASE expr2 : stmt2; stmt3; DEFAULT stmt4; END
+                                new Token(Token.Type.IDENTIFIER, "SWITCH", 0),
+                                new Token(Token.Type.IDENTIFIER, "expr", 6),
+                                new Token(Token.Type.IDENTIFIER, "DO", 11),
+                                new Token(Token.Type.IDENTIFIER, "stmt", 14),
+                                new Token(Token.Type.OPERATOR, ";", 18),
+                                new Token(Token.Type.IDENTIFIER, "END", 20)
+                        ),
+                        new Ast.Statement.While(
+                                new Ast.Expression.Access(Optional.empty(), "expr"),
+                                Arrays.asList(new Ast.Statement.Expression(new Ast.Expression.Access(Optional.empty(), "stmt")))
+                        )
+                )
+        );
+    }
+
     @ParameterizedTest
     @MethodSource
     void testWhileStatement(String test, List<Token> tokens, Ast.Statement.While expected) {
@@ -531,6 +615,135 @@ final class ParserTests {
                         )
                 ))
         ));
+        test(input, expected, Parser::parseSource);
+    }
+
+    @Test
+    void testExample2() {
+        /*
+            VAR i = -1;
+            VAL inc = 2;
+            FUN foo() DO
+                WHILE i != 1 DO
+                    IF i > 0 DO
+                        print(\"bar\");
+                    END
+                    i = i + inc;
+                END
+            END
+         */
+        List<Token> input = Arrays.asList(
+
+                //VAR i = -1;
+                new Token(Token.Type.IDENTIFIER, "VAR", 0),
+                new Token(Token.Type.IDENTIFIER, "i", 4),
+                new Token(Token.Type.OPERATOR, "=", 6),
+                new Token(Token.Type.INTEGER, "-1", 8),
+                new Token(Token.Type.OPERATOR, ";", 10),
+
+                //VAL inc = 2;
+                new Token(Token.Type.IDENTIFIER, "VAL", 12),
+                new Token(Token.Type.IDENTIFIER, "inc", 16),
+                new Token(Token.Type.OPERATOR, "=", 20),
+                new Token(Token.Type.INTEGER, "2", 22),
+                new Token(Token.Type.OPERATOR, ";", 23),
+
+                //FUN foo() DO
+                new Token(Token.Type.IDENTIFIER, "FUN", 25),
+                new Token(Token.Type.IDENTIFIER, "foo", 29),
+                new Token(Token.Type.OPERATOR, "(", 32),
+                new Token(Token.Type.OPERATOR, ")", 33),
+                new Token(Token.Type.IDENTIFIER, "DO", 35),
+
+                //    WHILE i != 1 DO
+                new Token(Token.Type.IDENTIFIER, "WHILE", 42),
+                new Token(Token.Type.IDENTIFIER, "i", 48),
+                new Token(Token.Type.OPERATOR, "!=", 50),
+                new Token(Token.Type.INTEGER, "1", 53),
+                new Token(Token.Type.IDENTIFIER, "DO", 55),
+
+                //        IF i > 0 DO
+                new Token(Token.Type.IDENTIFIER, "IF", 66),
+                new Token(Token.Type.IDENTIFIER, "i", 69),
+                new Token(Token.Type.OPERATOR, ">", 71),
+                new Token(Token.Type.INTEGER, "0", 73),
+                new Token(Token.Type.IDENTIFIER, "DO", 75),
+
+                //            print(\"bar\");
+                new Token(Token.Type.IDENTIFIER, "print", 90),
+                new Token(Token.Type.OPERATOR, "(", 95),
+                new Token(Token.Type.STRING, "\"bar\"", 96),
+                new Token(Token.Type.OPERATOR, ")", 101),
+                new Token(Token.Type.OPERATOR, ";", 102),
+
+                //        END
+                new Token(Token.Type.IDENTIFIER, "END", 112),
+
+                //        i = i + inc;
+                new Token(Token.Type.IDENTIFIER, "i",124),
+                new Token(Token.Type.OPERATOR, "=", 126),
+                new Token(Token.Type.IDENTIFIER, "i", 128),
+                new Token(Token.Type.OPERATOR, "+", 130),
+                new Token(Token.Type.IDENTIFIER, "inc", 132),
+                new Token(Token.Type.OPERATOR, ";", 135),
+
+                //    END
+                new Token(Token.Type.IDENTIFIER, "END", 141),
+
+                //END
+                new Token(Token.Type.IDENTIFIER, "END", 145)
+        );
+
+        Ast.Source expected = new Ast.Source(
+            Arrays.asList(
+                new Ast.Global("i", true, Optional.of(new Ast.Expression.Literal(BigInteger.valueOf(-1)))),
+                new Ast.Global("inc", false, Optional.of(new Ast.Expression.Literal(BigInteger.valueOf(2))))
+            ),
+            Arrays.asList(
+                new Ast.Function(
+                    "foo",
+                    Arrays.asList(),
+                    Arrays.asList(
+                        new Ast.Statement.While(
+                            new Ast.Expression.Binary(
+                                "!=",
+                                new Ast.Expression.Access(Optional.empty(), "i"),
+                                new Ast.Expression.Literal(BigInteger.ONE)
+                            ),
+                            Arrays.asList(
+                                new Ast.Statement.If(
+                                    new Ast.Expression.Binary(
+                                            ">",
+                                            new Ast.Expression.Access(Optional.empty(), "i"),
+                                            new Ast.Expression.Literal(BigInteger.ZERO)
+                                    ),
+                                    Arrays.asList(
+                                        new Ast.Statement.Expression(
+                                            new Ast.Expression.Function(
+                                                "print",
+                                                Arrays.asList(
+                                                    new Ast.Expression.Literal("bar")
+                                                )
+                                            )
+                                        )
+                                    ),
+                                    Arrays.asList()
+                                ),
+                                new Ast.Statement.Assignment(
+                                    new Ast.Expression.Access(Optional.empty(), "i"),
+                                    new Ast.Expression.Binary(
+                                        "+",
+                                        new Ast.Expression.Access(Optional.empty(), "i"),
+                                        new Ast.Expression.Access(Optional.empty(), "inc")
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        );
+
         test(input, expected, Parser::parseSource);
     }
 

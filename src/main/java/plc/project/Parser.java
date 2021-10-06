@@ -46,6 +46,11 @@ public final class Parser {
             functions.add(parseFunction());
         }
 
+        //if there are still tokens in the input stream, source grammar is violated
+        if (tokens.has(0)) {
+            throw new ParseException("Expected 'FUN'", errorIndex());
+        }
+
         return new Ast.Source(globals, functions);
     }
 
@@ -213,7 +218,7 @@ public final class Parser {
         ArrayList<Ast.Statement> statements = new ArrayList<Ast.Statement>();
 
         //as long as we have statements, continue parsing statements until we reach an identifier signifying the ending of a block
-        while (tokens.has(0) && !peek("END") && !peek("ELSE") && !peek("DEFAULT")) {
+        while (tokens.has(0) && !peek("END") && !peek("ELSE") && !peek("CASE") && !peek("DEFAULT")) {
             statements.add(parseStatement());
         }
 
@@ -308,7 +313,7 @@ public final class Parser {
         }
         else{
             thenStatements = parseBlock();
-            if (!peek("ELSE")){
+            if (!match("ELSE")){
                 if(!match("END")){
                     throw new ParseException("Expected 'END'", errorIndex());
                 }
@@ -319,7 +324,6 @@ public final class Parser {
                 }
             }
             else{
-                match("ELSE");
                 elseStatements = parseBlock();
                 if(!match("END")){
                     throw new ParseException("Expected 'END'", errorIndex());
@@ -350,8 +354,7 @@ public final class Parser {
         if(!match("DEFAULT")) {
             throw new ParseException("Expected 'DEFAULT'", errorIndex());
         }
-
-        parseBlock();
+        cases.add(parseCaseStatement());
 
         if(!match("END")) {
             throw new ParseException("Expected 'END'", errorIndex());
@@ -366,18 +369,20 @@ public final class Parser {
      * default block of a switch statement, aka {@code CASE} or {@code DEFAULT}.
      */
     public Ast.Statement.Case parseCaseStatement() throws ParseException {
-        Ast.Expression value;
+        Optional<Ast.Expression> value = Optional.empty();
         List<Ast.Statement> statements;
 
-        match("CASE");
-        value = parseExpression();
+        if (match("CASE")) {
 
-        if (!match(":")) {
-            throw new ParseException("Expected colon", errorIndex());
+            value = Optional.of(parseExpression());
+            if (!match(":")) {
+                throw new ParseException("Expected colon", errorIndex());
+            }
         }
+
         statements = parseBlock();
 
-        return new Ast.Statement.Case(Optional.of(value), statements);
+        return new Ast.Statement.Case(value, statements);
     }
 
     /**
