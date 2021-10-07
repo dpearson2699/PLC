@@ -27,7 +27,7 @@ public final class Lexer {
      * Repeatedly lexes the input using {@link #lexToken()}, also skipping over
      * whitespace where appropriate.
      */
-    public List<Token> lex() { //TODO
+    public List<Token> lex() {
 
         ArrayList<Token> tokenList = new ArrayList<Token>();
         while(chars.has(0)) {
@@ -50,7 +50,7 @@ public final class Lexer {
      * The next character should start a valid token since whitespace is handled
      * by {@link #lex()}
      */
-    public Token lexToken() { //TODO
+    public Token lexToken() {
         if (peek("@|[A-Za-z]")) {
             return lexIdentifier();
         }
