@@ -290,17 +290,49 @@ final class ParserTests {
         return Stream.of(
                 Arguments.of("Switch",
                         Arrays.asList(
-                                //SWITCH expr1 CASE expr2 : stmt1; CASE expr2 : stmt2; stmt3; DEFAULT stmt4; END
+                                //SWITCH expr1 CASE expr2 : stmt1; CASE expr3 : stmt2; stmt3; DEFAULT stmt4; END
                                 new Token(Token.Type.IDENTIFIER, "SWITCH", 0),
-                                new Token(Token.Type.IDENTIFIER, "expr", 6),
-                                new Token(Token.Type.IDENTIFIER, "DO", 11),
-                                new Token(Token.Type.IDENTIFIER, "stmt", 14),
-                                new Token(Token.Type.OPERATOR, ";", 18),
-                                new Token(Token.Type.IDENTIFIER, "END", 20)
+                                new Token(Token.Type.IDENTIFIER, "expr1", 7),
+                                new Token(Token.Type.IDENTIFIER, "CASE", 13),
+                                new Token(Token.Type.IDENTIFIER, "expr2", 18),
+                                new Token(Token.Type.OPERATOR, ":", 24),
+                                new Token(Token.Type.IDENTIFIER, "stmt1", 26),
+                                new Token(Token.Type.OPERATOR, ";", 27),
+                                new Token(Token.Type.IDENTIFIER, "CASE", 29),
+                                new Token(Token.Type.IDENTIFIER, "expr3", 34),
+                                new Token(Token.Type.OPERATOR, ":", 40),
+                                new Token(Token.Type.IDENTIFIER, "stmt2", 42),
+                                new Token(Token.Type.OPERATOR, ";", 47),
+                                new Token(Token.Type.IDENTIFIER, "stmt3", 49),
+                                new Token(Token.Type.OPERATOR, ";", 54),
+                                new Token(Token.Type.IDENTIFIER, "DEFAULT", 56),
+                                new Token(Token.Type.IDENTIFIER, "stmt4", 64),
+                                new Token(Token.Type.OPERATOR, ";", 69),
+                                new Token(Token.Type.IDENTIFIER, "END", 71)
                         ),
-                        new Ast.Statement.While(
-                                new Ast.Expression.Access(Optional.empty(), "expr"),
-                                Arrays.asList(new Ast.Statement.Expression(new Ast.Expression.Access(Optional.empty(), "stmt")))
+                        new Ast.Statement.Switch(
+                                new Ast.Expression.Access(Optional.empty(), "expr1"),
+                                Arrays.asList(
+                                        new Ast.Statement.Case(
+                                                Optional.of(new Ast.Expression.Access(Optional.empty(), "expr2")),
+                                                Arrays.asList(
+                                                        new Ast.Statement.Expression(new Ast.Expression.Access(Optional.empty(), "stmt1"))
+                                                )
+                                        ),
+                                        new Ast.Statement.Case(
+                                                Optional.of(new Ast.Expression.Access(Optional.empty(), "expr3")),
+                                                Arrays.asList(
+                                                        new Ast.Statement.Expression(new Ast.Expression.Access(Optional.empty(), "stmt2")),
+                                                        new Ast.Statement.Expression(new Ast.Expression.Access(Optional.empty(), "stmt3"))
+                                                )
+                                        ),
+                                        new Ast.Statement.Case(
+                                                Optional.empty(),
+                                                Arrays.asList(
+                                                        new Ast.Statement.Expression(new Ast.Expression.Access(Optional.empty(), "stmt4"))
+                                                )
+                                        )
+                                )
                         )
                 )
         );
