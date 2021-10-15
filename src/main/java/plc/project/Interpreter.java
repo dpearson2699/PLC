@@ -30,7 +30,27 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
     @Override
     public Environment.PlcObject visit(Ast.Global ast) {
-        throw new UnsupportedOperationException(); //TODO
+        /**
+         list ::= 'LIST' identifier '=' '[' expression (',' expression)* ']'
+         mutable ::= 'VAR' identifier ('=' expression)?
+         immutable ::= 'VAL' identifier '=' expression
+         */
+        
+        //How do you determine if it is a VAR or a LIST
+        if(ast.getMutable()){
+            //This would be for VAL, don't know what to do for LIST
+            if(ast.getValue().isPresent()){
+                scope.defineVariable(ast.getName(), true, visit(ast.getValue().get()));
+            }
+            else{
+                scope.defineVariable(ast.getName(), true, Environment.NIL);
+            }
+        }
+        else{
+            scope.defineVariable(ast.getName(), false, visit(ast.getValue().get()));
+        }
+
+        return Environment.NIL;
     }
 
     @Override
@@ -62,7 +82,26 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
     @Override
     public Environment.PlcObject visit(Ast.Statement.If ast) {
-        throw new UnsupportedOperationException(); //TODO
+        //if true
+        if(requireType(Boolean.class, visit(ast.getCondition()))){
+            try{
+                scope = new Scope(scope);
+                ast.getThenStatements().forEach(this::visit);
+            } finally {
+                scope = scope.getParent();
+            }
+        }
+        //if false
+        else{
+            try{
+                scope = new Scope(scope);
+                ast.getElseStatements().forEach(this::visit);
+            } finally {
+                scope = scope.getParent();
+            }
+        }
+
+        return Environment.NIL;
     }
 
     @Override
