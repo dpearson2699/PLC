@@ -1,5 +1,6 @@
 package plc.project;
 
+import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
@@ -142,27 +143,101 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
     @Override
     public Environment.PlcObject visit(Ast.Expression.Literal ast) {
-        throw new UnsupportedOperationException(); //TODO
+
+        //??? should null literal return Environment.NIL
+        return Environment.create(ast.getLiteral());
     }
 
     @Override
     public Environment.PlcObject visit(Ast.Expression.Group ast) {
-        throw new UnsupportedOperationException(); //TODO
+        return visit(ast.getExpression());
     }
 
     @Override
     public Environment.PlcObject visit(Ast.Expression.Binary ast) {
-        throw new UnsupportedOperationException(); //TODO
+        String operator = ast.getOperator();
+
+        if (operator.equals("&&") || operator.equals("||")) {
+
+            boolean lhs, rhs, result;
+            lhs = requireType(Boolean.class, visit(ast.getLeft()));
+            rhs = requireType(Boolean.class, visit(ast.getRight()));
+            result = operator.equals("&&") ? lhs && rhs : lhs || rhs;
+
+            return Environment.create(result);
+        }
+        else if (operator.equals("<") || operator.equals(">")) {
+
+            Environment.PlcObject lhs = visit(ast.getLeft());
+            Environment.PlcObject rhs = visit(ast.getRight());
+
+            if (!(lhs.getValue().getClass().equals(rhs.getValue().getClass()))) {
+                throw new RuntimeException("Expected type " + Comparable.class.getName() + ", received " + lhs.getValue().getClass().getName() + ".");
+            }
+
+            if (!(lhs.getValue() instanceof Comparable)) {
+
+            }
+
+            return lhs.getValue().getClass().compare
+
+            return lhs.getValue().compareTo(rhs.getValue());
+
+
+            /*
+            Environment.PlcObject lhs = visit(ast.getLeft());
+            if (!(lhs.getValue() instanceof Comparable)) {
+                throw new RuntimeException("Expected type " + Comparable.class.getName() + ", received " + lhs.getValue().getClass().getName() + ".");
+            }
+            lhs.getValue().getClass() rhs;
+             */
+
+        }
+        else if () {
+
+        }
+        else if () {
+
+        }
+        else {
+
+        }
     }
 
     @Override
     public Environment.PlcObject visit(Ast.Expression.Access ast) {
-        throw new UnsupportedOperationException(); //TODO
+
+        if (ast.getOffset().isPresent()) { //if there is an offset, accessing a list
+
+            //list stored as a Variable in scope, with value being a PlcObject, whose value is the list of elements
+            List<Object> list = (List<Object>)scope.lookupVariable(ast.getName()).getValue().getValue();
+
+            Environment.PlcObject offset = visit(ast.getOffset().get());
+            int index = requireType(BigInteger.class, offset).intValue();
+
+            return Environment.create(list.get(index));
+        }
+        else { //no offset, accessing a variable
+
+            //variable already exists in scope; get Variable instance, retrieve PlcObject value
+            return scope.lookupVariable(ast.getName()).getValue();
+        }
     }
 
     @Override
     public Environment.PlcObject visit(Ast.Expression.Function ast) {
-        throw new UnsupportedOperationException(); //TODO
+
+        //invoke requires a list of PlcObject arguments while Ast.Expression.Function only contains a list of Ast.Expression arguments
+        //need to convert Ast.Expression -> PlcObject by visiting
+        int arity = ast.getArguments().size();
+        List<Ast.Expression> exprArguments = ast.getArguments();
+        ArrayList<Environment.PlcObject> plcArguments = new ArrayList<Environment.PlcObject>();
+        for (int i = 0; i < arity; i++) {
+            plcArguments.add(visit(ast.getArguments().get(i)));
+        }
+
+        //retrieve the respective function from scope, then invoke it with the visited arguments
+        return scope.lookupFunction(ast.getName(), ast.getArguments().size()).invoke(plcArguments);
     }
 
     @Override
