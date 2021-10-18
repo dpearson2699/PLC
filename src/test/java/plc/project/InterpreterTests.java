@@ -69,7 +69,7 @@ final class InterpreterTests {
     void testList() {
         // LIST list = [1, 5, 10];
 
-        List<BigInteger> expected = Arrays.asList(BigInteger.ONE, BigInteger.valueOf(5), BigInteger.TEN);
+        List<Object> expected = Arrays.asList(BigInteger.ONE, BigInteger.valueOf(5), BigInteger.TEN);
 
         List<Ast.Expression> values = Arrays.asList(new Ast.Expression.Literal(BigInteger.ONE),
                                                     new Ast.Expression.Literal(BigInteger.valueOf(5)),
@@ -167,8 +167,8 @@ final class InterpreterTests {
     void testListAssignmentStatement() {
         // list[2] = 3;
 
-        List<BigInteger> expected = Arrays.asList(BigInteger.ONE, BigInteger.valueOf(5), BigInteger.valueOf(3));
-        List<BigInteger> list = Arrays.asList(BigInteger.ONE, BigInteger.valueOf(5), BigInteger.TEN);
+        List<Object> expected = Arrays.asList(BigInteger.ONE, BigInteger.valueOf(5), BigInteger.valueOf(3));
+        List<Object> list = Arrays.asList(BigInteger.ONE, BigInteger.valueOf(5), BigInteger.TEN);
 
         Scope scope = new Scope(null);
         scope.defineVariable("list", true, Environment.create(list));
@@ -399,7 +399,7 @@ final class InterpreterTests {
     void testListAccessExpression() {
         // list[1]
 
-        List<BigInteger> list = Arrays.asList(BigInteger.ONE, BigInteger.valueOf(5), BigInteger.TEN);
+        List<Object> list = Arrays.asList(BigInteger.ONE, BigInteger.valueOf(5), BigInteger.TEN);
 
         Scope scope = new Scope(null);
         scope.defineVariable("list", true, Environment.create(list));
@@ -427,6 +427,21 @@ final class InterpreterTests {
                         Environment.NIL.getValue()
                 )
         );
+    }
+
+    @Test
+    void testPlcList() {
+        // [1, 5, 10]
+
+        List<Object> expected = Arrays.asList(BigInteger.ONE, BigInteger.valueOf(5), BigInteger.TEN);
+
+        List<Ast.Expression> values = Arrays.asList(new Ast.Expression.Literal(BigInteger.ONE),
+                new Ast.Expression.Literal(BigInteger.valueOf(5)),
+                new Ast.Expression.Literal(BigInteger.TEN));
+
+        Ast ast = new Ast.Expression.PlcList(values);
+
+        test(ast, expected, new Scope(null));
     }
 
     private static Scope test(Ast ast, Object expected, Scope scope) {
