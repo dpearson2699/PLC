@@ -97,7 +97,6 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
     @Override
     public Environment.PlcObject visit(Ast.Statement.Expression ast) {
-
         visit(ast.getExpression());
         return Environment.NIL;
     }
@@ -117,29 +116,30 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
     @Override
     public Environment.PlcObject visit(Ast.Statement.Assignment ast) {
 
+        //receiver must be an Access
         if (!(ast.getReceiver().getClass().equals(Ast.Expression.Access.class))) {
             throw new RuntimeException("Expected type Access, received " + ast.getReceiver().getClass().getName() + ".");
         }
 
         //can only assign to a mutable variable in scope
-        Environment.Variable receiver = scope.lookupVariable(((Ast.Expression.Access) ast.getReceiver()).getName());
-        if (!receiver.getMutable()) {
+        Ast.Expression.Access receiver = (Ast.Expression.Access) ast.getReceiver();
+        Environment.Variable receiverVar = scope.lookupVariable(receiver.getName());
+        if (!receiverVar.getMutable()) {
             throw new RuntimeException("Expected mutable receiver.");
         }
 
-        receiver.setValue(visit(ast.getValue()));
+        if (receiver.getOffset().isPresent()) { //if an offset is present, we are assigning to a list element
+            List<Object> list = (List<Object>)receiverVar.getValue().getValue();
 
-        /*
-        if (((Ast.Expression.Access) ast.getReceiver()).getOffset().isPresent()) { //if an offset is present, we are assigning to a list element
-            List<Object> list = (List<Object>)receiver.getValue().getValue();
+            BigInteger offset = requireType(BigInteger.class, visit(receiver.getOffset().get()));
 
-            //int offset = ((Ast.Expression.Access) ast.getReceiver()).getOffset().get()
+            //Java is pass by value/reference (list isn't a copy, it's the actual list stored in Env.Var receiver)
+            list.set(offset.intValue(),visit(ast.getValue()).getValue());
 
         }
         else { //otherwise we are assigning to a variable
-            receiver.setValue(visit(ast.getValue()));
+            receiverVar.setValue(visit(ast.getValue()));
         }
-         */
 
         return Environment.NIL;
     }
@@ -174,7 +174,7 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
         Environment.PlcObject condition = visit(ast.getCondition());
         for (Ast.Statement.Case i : ast.getCases()) {
 
-            if (visit(i).equals(Environment.NIL) || visit(i).getValue().equals(condition.getValue())) {
+            if (visit(i).getValue().equals(condition.getValue()) || visit(i).equals(Environment.NIL)) { //if case matches condition or case is default
                 try {
                     scope = new Scope(scope);
                     i.getStatements().forEach(this::visit);
@@ -183,7 +183,7 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
                     scope = scope.getParent();
                 }
 
-                return Environment.NIL;
+                return Environment.NIL; //exit switch
             }
         }
 
@@ -248,25 +248,33 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
     public Environment.PlcObject visit(Ast.Expression.Binary ast) {
         String operator = ast.getOperator();
         Environment.PlcObject left = visit(ast.getLeft());
-        Environment.PlcObject right = visit(ast.getRight());
         Object leftType = left.getValue().getClass();
-        Object rightType = right.getValue().getClass();
 
         if (operator.equals("&&") || operator.equals("||")) {
 
-            if (true) {};
-
             Boolean lhs, rhs;
             lhs = requireType(Boolean.class, left);
+
+            if (lhs && operator.equals("||")) { //short-circuiting: TRUE || ... is always TRUE
+                return Environment.create(new Boolean(true));
+            }
+            else if (!lhs && operator.equals("&&")) {   //short-circuiting: FALSE && ... is always FALSE
+                return Environment.create(new Boolean(false));
+            }
+
+            Environment.PlcObject right = visit(ast.getRight());
             rhs = requireType(Boolean.class, right);
             boolean result = operator.equals("&&") ? lhs && rhs : lhs || rhs;
 
             //wrap in Boolean object; PlcObject's value is of type Object
-            //??? why does passing in boolean work
-            //??? what is boolean.class
+            //autoboxing: can just pass boolean and it will be boxed automatically
             return Environment.create(new Boolean(result));
         }
-        else if (operator.equals("<") || operator.equals(">")) {
+
+        Environment.PlcObject right = visit(ast.getRight());
+        Object rightType = right.getValue().getClass();
+
+        if (operator.equals("<") || operator.equals(">")) {
 
             //lhs and rhs must be types that are instances of Comparable
             Comparable lhs = requireType(Comparable.class, left);
@@ -363,19 +371,26 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
                 throw new RuntimeException("Expected type BigInteger/BigDecimal, received " + left.getValue().getClass().getName() + ".");
             }
         }
-        else {
+        else {  //the last possible operator for a valid BinaryExpression node is ^
 
             if (leftType.equals(BigInteger.class)) {
 
                 BigInteger lhs = (BigInteger)left.getValue();
                 BigInteger rhs = requireType(BigInteger.class, right);
+                if (rhs.compareTo(BigInteger.ZERO) > 0) {
 
-                return Environment.create(lhs.pow(rhs.intValue()));
+                    return Environment.create(lhs.pow(rhs.intValue()));
+                }
+                else {  //BigInteger.pow() cannot handle negative exponents, but BigDecimal can
+
+                    BigDecimal _lhs = new BigDecimal(lhs);
+                    return Environment.create(_lhs.pow(rhs.intValue()));
+                }
             }
             else if (leftType.equals(BigDecimal.class)) {
 
                 BigDecimal lhs = (BigDecimal)left.getValue();
-                BigDecimal rhs = requireType(BigDecimal.class, right);
+                BigInteger rhs = requireType(BigInteger.class, right);
 
                 return Environment.create(lhs.pow(rhs.intValue()));
             }
