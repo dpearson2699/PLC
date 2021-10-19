@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -26,7 +27,18 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
     @Override
     public Environment.PlcObject visit(Ast.Source ast) {
-        throw new UnsupportedOperationException(); //TODO
+        for(Ast.Global global : ast.getGlobals()){
+            visit(global);
+        }
+        for(Ast.Function function : ast.getFunctions()){
+            visit(function);
+        }
+        //Try catch probably not correct but will do for now
+        try {
+            return scope.lookupFunction("main", 0).invoke(new ArrayList<Environment.PlcObject>());
+        } catch (Exception e){
+            throw new RuntimeException("Main out of scope");
+        }
     }
 
     @Override
@@ -60,7 +72,27 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
     @Override
     public Environment.PlcObject visit(Ast.Function ast) {
-        throw new UnsupportedOperationException(); //TODO
+        scope.defineFunction(ast.getName(), ast.getParameters().size(), arguments ->{
+            try{
+                scope = new Scope(scope);
+                //arguments
+                for(int i = 0; i < arguments.size(); i++){
+                    //not sure if this is supposed to be mutable or not
+                    scope.defineVariable(ast.getParameters().get(i), true, arguments.get(i));
+                }
+
+                //statements
+                ast.getStatements().forEach(this::visit);
+
+            } catch(Return ret){
+                return ret.value;
+
+            } finally {
+                scope = scope.getParent();
+            }
+            return Environment.NIL;
+        });
+        return Environment.NIL;
     }
 
     @Override
