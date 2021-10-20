@@ -43,41 +43,43 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
     @Override
     public Environment.PlcObject visit(Ast.Global ast) {
-        /**
-         list ::= 'LIST' identifier '=' '[' expression (',' expression)* ']'
-         mutable ::= 'VAR' identifier ('=' expression)?
-         immutable ::= 'VAL' identifier '=' expression
-         */
 
-        if (ast.getValue().get() instanceof Ast.Expression.PlcList) {
+        boolean mutable;
+        Environment.PlcObject value;
 
-        }
-
-        //How do you determine if it is a VAR or a LIST
+        //VAR and List are mutable
         if(ast.getMutable()){
-            //This would be for VAL, don't know what to do for LIST
+
+            mutable = true;
+
             if(ast.getValue().isPresent()){
-                scope.defineVariable(ast.getName(), true, visit(ast.getValue().get()));
+
+                value = visit(ast.getValue().get());
             }
-            else{
-                scope.defineVariable(ast.getName(), true, Environment.NIL);
+            else{   //Parser already throws an error if List has no value; so this case only applies to uninitialized VAR
+
+                value = Environment.NIL;
             }
         }
         else{
-            scope.defineVariable(ast.getName(), false, visit(ast.getValue().get()));
+
+            mutable = false;
+            value = visit(ast.getValue().get());
         }
+
+        scope.defineVariable(ast.getName(), mutable, value);
 
         return Environment.NIL;
     }
 
     @Override
     public Environment.PlcObject visit(Ast.Function ast) {
-        scope.defineFunction(ast.getName(), ast.getParameters().size(), arguments ->{
+        scope.defineFunction(ast.getName(), ast.getParameters().size(), arguments -> {
             try{
                 scope = new Scope(scope);
+
                 //arguments
                 for(int i = 0; i < arguments.size(); i++){
-                    //not sure if this is supposed to be mutable or not
                     scope.defineVariable(ast.getParameters().get(i), true, arguments.get(i));
                 }
 
@@ -330,6 +332,9 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
             }
         }
         else if (operator.equals("-") || operator.equals("*")) {
+
+            //left.getValue() instanceof  BigInteger;
+            //BigInteger.class.isInstance(left.getValue());
 
             if (leftType.equals(BigInteger.class)) {
 
