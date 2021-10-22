@@ -27,18 +27,17 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
     @Override
     public Environment.PlcObject visit(Ast.Source ast) {
+
+        //declare/initialize functions and globals
         for(Ast.Global global : ast.getGlobals()){
             visit(global);
         }
         for(Ast.Function function : ast.getFunctions()){
             visit(function);
         }
-        //Try catch probably not correct but will do for now
-        try {
-            return scope.lookupFunction("main", 0).invoke(new ArrayList<Environment.PlcObject>());
-        } catch (Exception e){
-            throw new RuntimeException("Main out of scope");
-        }
+
+        //invoke main, if it doesn't exist throw an exception
+        return scope.lookupFunction("main", 0).invoke(new ArrayList<Environment.PlcObject>());
     }
 
     @Override
@@ -74,6 +73,11 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
     @Override
     public Environment.PlcObject visit(Ast.Function ast) {
+
+        //need to save scope
+        //breakpoint class functions
+
+        //dynamica
         scope.defineFunction(ast.getName(), ast.getParameters().size(), arguments -> {
             try{
                 scope = new Scope(scope);
@@ -92,7 +96,7 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
             } finally {
                 scope = scope.getParent();
             }
-            return Environment.NIL;
+            return Environment.NIL; //no return is listed, nothing returned (for void)
         });
         return Environment.NIL;
     }
@@ -439,6 +443,17 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
         for (int i = 0; i < arity; i++) {
             plcArguments.add(visit(exprArguments.get(i)));
         }
+
+        //go through all
+        /*
+        for () {
+            //if Ast.Expression.Access
+            if () {
+                //check global scope for same var
+                while()
+            }
+        }
+        */
 
         //retrieve the respective function from scope, then invoke it with the visited arguments
         return scope.lookupFunction(ast.getName(), exprArguments.size()).invoke(plcArguments);

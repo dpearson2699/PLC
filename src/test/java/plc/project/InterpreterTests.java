@@ -45,7 +45,69 @@ final class InterpreterTests {
                                         new Ast.Expression.Access(Optional.empty(), "x"),
                                         new Ast.Expression.Access(Optional.empty(), "y")                                ))
                         )))
-                ), Environment.NIL.getValue())
+                ), Environment.NIL.getValue()),
+                // VAR x = 1; VAR y = 10; FUN main() RETURN x + y; END
+                Arguments.of("Globals & Return", new Ast.Source(
+                        Arrays.asList(
+                                new Ast.Global("x", true, Optional.of(new Ast.Expression.Literal(BigInteger.ONE))),
+                                new Ast.Global("y", true, Optional.of(new Ast.Expression.Literal(BigInteger.TEN)))
+                        ),
+                        Arrays.asList(new Ast.Function("main", Arrays.asList(), Arrays.asList(
+                                new Ast.Statement.Return(new Ast.Expression.Binary("+",
+                                        new Ast.Expression.Access(Optional.empty(), "x"),
+                                        new Ast.Expression.Access(Optional.empty(), "y")                                ))
+                        )))
+                ), BigInteger.valueOf(11)),
+                // VAR x = 1; VAR y = 10; FUN math() RETURN x + y; END
+                Arguments.of("No main()", new Ast.Source(
+                        Arrays.asList(
+                                new Ast.Global("x", true, Optional.of(new Ast.Expression.Literal(BigInteger.ONE))),
+                                new Ast.Global("y", true, Optional.of(new Ast.Expression.Literal(BigInteger.TEN)))
+                        ),
+                        Arrays.asList(new Ast.Function("math", Arrays.asList(), Arrays.asList(
+                                new Ast.Statement.Return(new Ast.Expression.Binary("+",
+                                        new Ast.Expression.Access(Optional.empty(), "x"),
+                                        new Ast.Expression.Access(Optional.empty(), "y")                                ))
+                        )))
+                ), null),
+                // FUN main() RETURN x + y; END
+                Arguments.of("Missing globals", new Ast.Source(
+                        Arrays.asList(),
+                        Arrays.asList(new Ast.Function("main", Arrays.asList(), Arrays.asList(
+                                new Ast.Statement.Return(new Ast.Expression.Binary("+",
+                                        new Ast.Expression.Access(Optional.empty(), "x"),
+                                        new Ast.Expression.Access(Optional.empty(), "y")                                ))
+                        )))
+                ), null),
+                // VAR x = 1; VAR y = 2; VAR z = 3; FUN f(z) DO RETURN x + y + z; END FUN main() DO LET y = 4; RETURN f(5); END
+                Arguments.of("Function Scope", new Ast.Source(
+                        Arrays.asList(
+                                new Ast.Global("x", true, Optional.of(new Ast.Expression.Literal(BigInteger.ONE))),
+                                new Ast.Global("y", true, Optional.of(new Ast.Expression.Literal(new BigInteger("2")))),
+                                new Ast.Global("3", true, Optional.of(new Ast.Expression.Literal(new BigInteger("3"))))
+                        ),
+                        Arrays.asList(
+                                new Ast.Function("f", Arrays.asList("z"), Arrays.asList(
+                                        new Ast.Statement.Return(
+                                                new Ast.Expression.Binary("+",
+                                                        new Ast.Expression.Binary("+",
+                                                                new Ast.Expression.Access(Optional.empty(), "x"),
+                                                                new Ast.Expression.Access(Optional.empty(), "y")),
+                                                        new Ast.Expression.Access(Optional.empty(), "z")
+                                                ))
+                                )),
+                                new Ast.Function("main", Arrays.asList(), Arrays.asList(
+                                        new Ast.Statement.Assignment(
+                                                new Ast.Expression.Access(Optional.empty(), "y"),
+                                                new Ast.Expression.Literal(new BigInteger("4"))
+                                        ),
+                                        new Ast.Statement.Return(new Ast.Expression.Function(
+                                                "f",
+                                                Arrays.asList(new Ast.Expression.Literal(new BigInteger("5")))
+                                        )))
+                                )
+                        )
+                ), BigInteger.valueOf(8))
         );
     }
 
@@ -110,6 +172,8 @@ final class InterpreterTests {
                         Arrays.asList(Environment.create(BigInteger.TEN)),
                         BigInteger.valueOf(100)
                 )
+                //log
+                //other example in class
         );
     }
 
@@ -373,6 +437,27 @@ final class InterpreterTests {
                                 new Ast.Expression.Literal(new BigDecimal("3.4"))
                         ),
                         new BigDecimal("0.4")
+                ),
+                Arguments.of("Exponent Base Integer",
+                        new Ast.Expression.Binary("^",
+                                new Ast.Expression.Literal(new BigInteger("2")),
+                                new Ast.Expression.Literal(new BigInteger("3"))
+                        ),
+                        new BigInteger("8")
+                ),
+                Arguments.of("Exponent Base Decimal",
+                        new Ast.Expression.Binary("^",
+                                new Ast.Expression.Literal(new BigInteger("2")),
+                                new Ast.Expression.Literal(new BigInteger("3"))
+                        ),
+                        new BigInteger("8")
+                ),
+                Arguments.of("Negative Exponent",
+                        new Ast.Expression.Binary("^",
+                                new Ast.Expression.Literal(new BigInteger("2")),
+                                new Ast.Expression.Literal(new BigInteger("-3"))
+                        ),
+                        new BigInteger("8")
                 )
         );
     }
