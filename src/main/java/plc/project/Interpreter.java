@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -73,14 +74,13 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
     @Override
     public Environment.PlcObject visit(Ast.Function ast) {
+        Scope globalScope = scope;
 
-        //need to save scope
-        //breakpoint class functions
-
-        //dynamica
+        //dynamically build a Function object using members of Ast.Function (not the same as manually building Function objects to test Ast.Expression.Function)
         scope.defineFunction(ast.getName(), ast.getParameters().size(), arguments -> {
+            Scope previous = scope;
             try{
-                scope = new Scope(scope);
+                scope = new Scope(globalScope);
 
                 //arguments
                 for(int i = 0; i < arguments.size(); i++){
@@ -94,7 +94,7 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
                 return ret.value;
 
             } finally {
-                scope = scope.getParent();
+                scope = previous;
             }
             return Environment.NIL; //no return is listed, nothing returned (for void)
         });
@@ -122,7 +122,7 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
     @Override
     public Environment.PlcObject visit(Ast.Statement.Assignment ast) {
 
-        //receiver must be an Access
+        //receiver must be an Access to be assignable
         if (!(ast.getReceiver().getClass().equals(Ast.Expression.Access.class))) {
             throw new RuntimeException("Expected type Access, received " + ast.getReceiver().getClass().getName() + ".");
         }
@@ -144,11 +144,20 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
         }
         else { //otherwise we are assigning to a variable
+
+            //list elements are mutable, but list itself can't be reassigned
+            if (receiverVar.getValue().getValue() instanceof List) {
+                throw new RuntimeException("List cannot be reassigned.");
+            }
+
             receiverVar.setValue(visit(ast.getValue()));
         }
 
         return Environment.NIL;
     }
+
+    //need try{}finally{} in the case getStatements() contains a Return statement (throws an error that is only caught in visit Ast.Function)
+    //want error to bubble up to Ast.Function, but still need to restore scope from If/While/Switch
 
     @Override
     public Environment.PlcObject visit(Ast.Statement.If ast) {
@@ -254,7 +263,7 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
     public Environment.PlcObject visit(Ast.Expression.Binary ast) {
         String operator = ast.getOperator();
         Environment.PlcObject left = visit(ast.getLeft());
-        Object leftType = left.getValue().getClass();
+        //Object leftType = left.getValue().getClass();
 
         if (operator.equals("&&") || operator.equals("||")) {
 
@@ -263,9 +272,6 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
             if (lhs && operator.equals("||")) { //short-circuiting: TRUE || ... is always TRUE
                 return Environment.create(new Boolean(true));
-            }
-            else if (!lhs && operator.equals("&&")) {   //short-circuiting: FALSE && ... is always FALSE
-                return Environment.create(new Boolean(false));
             }
 
             Environment.PlcObject right = visit(ast.getRight());
@@ -278,7 +284,7 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
         }
 
         Environment.PlcObject right = visit(ast.getRight());
-        Object rightType = right.getValue().getClass();
+        //Object rightType = right.getValue().getClass();
 
         if (operator.equals("<") || operator.equals(">")) {
 
@@ -304,27 +310,27 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
         }
         else if (operator.equals("==") || operator.equals("!=")) {
 
-            boolean result = left.getValue().equals(right.getValue());
+            boolean result = left.getValue().equals(right.getValue()) == operator.equals("==");
             return Environment.create(new Boolean(result));
         }
         else if (operator.equals("+")) {
 
             //https://stackoverflow.com/questions/4344871/how-can-i-know-if-object-is-string-type-object
             //??? should we wrap String in new String (says it's redundant)
-            if (leftType.equals(String.class)) {
+            if (left.getValue() instanceof String) {
                 return Environment.create((String)left.getValue() + right.getValue());
             }
-            else if (rightType.equals(String.class)) {
+            else if (right.getValue() instanceof String) {
                 return Environment.create(left.getValue() + (String)right.getValue());
             }
-            else if (leftType.equals(BigInteger.class)){
+            else if (left.getValue() instanceof BigInteger){
 
                 BigInteger lhs = (BigInteger)left.getValue();
                 BigInteger rhs = requireType(BigInteger.class, right);
 
                 return Environment.create(lhs.add(rhs));
             }
-            else if (leftType.equals(BigDecimal.class)) {
+            else if (left.getValue() instanceof BigDecimal) {
 
                 BigDecimal lhs = (BigDecimal)left.getValue();
                 BigDecimal rhs = requireType(BigDecimal.class, right);
@@ -340,15 +346,15 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
             //left.getValue() instanceof  BigInteger;
             //BigInteger.class.isInstance(left.getValue());
 
-            if (leftType.equals(BigInteger.class)) {
+            if (left.getValue() instanceof BigInteger) {
 
                 BigInteger lhs = (BigInteger)left.getValue();
                 BigInteger rhs = requireType(BigInteger.class, right);
 
-                BigInteger result = operator.equals("-") ? lhs.subtract(rhs) :lhs.multiply(rhs);
+                BigInteger result = operator.equals("-") ? lhs.subtract(rhs) : lhs.multiply(rhs);
                 return Environment.create(result);
             }
-            else if (leftType.equals(BigDecimal.class)) {
+            else if (left.getValue() instanceof BigDecimal) {
 
                 BigDecimal lhs = (BigDecimal)left.getValue();
                 BigDecimal rhs = requireType(BigDecimal.class, right);
@@ -362,14 +368,14 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
         }
         else if (operator.equals("/")) {
 
-            if (leftType.equals(BigInteger.class)) {
+            if (left.getValue() instanceof BigInteger) {
 
                 BigInteger lhs = (BigInteger)left.getValue();
                 BigInteger rhs = requireType(BigInteger.class, right);
 
                 return Environment.create(lhs.divide(rhs));
             }
-            else if (leftType.equals(BigDecimal.class)) {
+            else if (left.getValue() instanceof BigDecimal) {
 
                 BigDecimal lhs = (BigDecimal)left.getValue();
                 BigDecimal rhs = requireType(BigDecimal.class, right);
@@ -382,7 +388,7 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
         }
         else {  //the last possible operator for a valid BinaryExpression node is ^
 
-            if (leftType.equals(BigInteger.class)) {
+            if (left.getValue() instanceof BigInteger) {
 
                 BigInteger lhs = (BigInteger)left.getValue();
                 BigInteger rhs = requireType(BigInteger.class, right);
@@ -392,16 +398,33 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
                 }
                 else {  //BigInteger.pow() cannot handle negative exponents, but BigDecimal can
 
+                    /*
+                        BigDecimal _lhs = new BigDecimal(lhs);
+                        return Environment.create(_lhs.pow(rhs.intValue()));
+                    */
+                    //return Environment.create(BigDecimal.ONE.divide(BigDecimal.valueOf(lhs.pow(rhs.intValue() * -1).doubleValue())));
+
                     BigDecimal _lhs = new BigDecimal(lhs);
-                    return Environment.create(_lhs.pow(rhs.intValue()));
+                    BigDecimal _rhs = new BigDecimal(rhs);
+                    return Environment.create(BigDecimal.ONE.divide(_lhs.pow(_rhs.abs().intValue())));
                 }
             }
-            else if (leftType.equals(BigDecimal.class)) {
+            else if (left.getValue() instanceof BigDecimal) {
 
                 BigDecimal lhs = (BigDecimal)left.getValue();
                 BigInteger rhs = requireType(BigInteger.class, right);
 
-                return Environment.create(lhs.pow(rhs.intValue()));
+                //return Environment.create(lhs.pow(rhs.intValue()));
+
+                if (rhs.compareTo(BigInteger.ZERO) > 0) {
+
+                    return Environment.create(lhs.pow(rhs.intValue()));
+                }
+                else {
+
+                    //handle non-terminating decimal???
+                    return Environment.create(BigDecimal.ONE.divide(lhs.pow(rhs.abs().intValue())));
+                }
             }
             else {
                 throw new RuntimeException("Expected type BigInteger/BigDecimal, received " + left.getValue().getClass().getName() + ".");
@@ -422,6 +445,9 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
 
             Environment.PlcObject offset = visit(ast.getOffset().get());
             int index = requireType(BigInteger.class, offset).intValue();
+            if (index >= list.size() || index < 0) {
+                throw new RuntimeException("List index out of bounds.");
+            }
 
             return Environment.create(list.get(index));
         }

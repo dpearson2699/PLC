@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Optional;
 
@@ -86,6 +87,70 @@ public final class InterpreterBaselineTests {
         Assertions.assertEquals("1", builder.toString());
     }
 
+    @Test
+    void testLogarithmExpressionStatement() {
+        Scope scope = new Scope(null);
+        scope.defineFunction("logarithm", 1, args -> {
+            if (!(args.get(0).getValue() instanceof BigDecimal)) {
+                throw new RuntimeException("Expected type BigDecimal, recieved" + args.get(0).getValue().getClass().getName() + ".");
+            }
+
+            BigDecimal bd1 = (BigDecimal) args.get(0).getValue();
+            BigDecimal bd2 = requireType(BigDecimal.class, Environment.create(args.get(0).getValue()));
+            BigDecimal result = BigDecimal.valueOf(Math.log(bd2.doubleValue()));
+
+            return Environment.create(result);
+        });
+
+        test(new Ast.Expression.Function(
+                "logarithm",
+                Arrays.asList(new Ast.Expression.Literal(BigDecimal.valueOf(Math.E)))
+            ),
+            BigDecimal.valueOf(1.0),
+            scope
+        );
+    }
+
+    @Test
+    void testConverterExpressionStatement() {
+        Scope scope = new Scope(null);
+        scope.defineFunction("converter", 2, args -> {
+            BigInteger decimal = requireType(BigInteger.class, Environment.create(args.get(0).getValue()));
+            BigInteger base = requireType(BigInteger.class, Environment.create(args.get(1).getValue()));
+
+            String number = new String();
+            int i, n = 0;
+
+            ArrayList<BigInteger> quotients = new ArrayList<>();
+            ArrayList<BigInteger> remainders = new ArrayList<>();
+
+            quotients.add(decimal);
+
+            do {
+                quotients.add(quotients.get(n).divide(base));
+                remainders.add(
+                        quotients.get(n).subtract(quotients.get(n+1).multiply(base))
+                );
+                n++;
+            } while (quotients.get(n).compareTo(BigInteger.ZERO) > 0);
+
+            for (i = 0; i < remainders.size(); i++) {
+                number = remainders.get(i).toString() + number;
+            }
+
+            return Environment.create(number);
+        });
+
+        test(new Ast.Expression.Function(
+                "converter",
+                Arrays.asList(new Ast.Expression.Literal(BigInteger.valueOf(11)),
+                        new Ast.Expression.Literal(BigInteger.valueOf(2)))
+            ),
+            "1011",
+            scope
+        );
+    }
+
     /**
      * Tests that visiting the source rule invokes the main/0 function and
      * returns the result.
@@ -106,4 +171,11 @@ public final class InterpreterBaselineTests {
         }
     }
 
+    private static <T> T requireType(Class<T> type, Environment.PlcObject object) {
+        if (type.isInstance(object.getValue())) {
+            return type.cast(object.getValue());
+        } else {
+            throw new RuntimeException("Expected type " + type.getName() + ", received " + object.getValue().getClass().getName() + ".");
+        }
+    }
 }

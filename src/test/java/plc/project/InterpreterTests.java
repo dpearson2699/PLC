@@ -79,27 +79,27 @@ final class InterpreterTests {
                                         new Ast.Expression.Access(Optional.empty(), "y")                                ))
                         )))
                 ), null),
-                // VAR x = 1; VAR y = 2; VAR z = 3; FUN f(z) DO RETURN x + y + z; END FUN main() DO LET y = 4; RETURN f(5); END
+                // VAR w = 1; VAR y = 2; VAR z = 3; FUN f(z) DO RETURN w + y + z; END FUN main() DO LET y = 4; RETURN f(5); END
                 Arguments.of("Function Scope", new Ast.Source(
                         Arrays.asList(
-                                new Ast.Global("x", true, Optional.of(new Ast.Expression.Literal(BigInteger.ONE))),
+                                new Ast.Global("w", true, Optional.of(new Ast.Expression.Literal(BigInteger.ONE))),
                                 new Ast.Global("y", true, Optional.of(new Ast.Expression.Literal(new BigInteger("2")))),
-                                new Ast.Global("3", true, Optional.of(new Ast.Expression.Literal(new BigInteger("3"))))
+                                new Ast.Global("z", true, Optional.of(new Ast.Expression.Literal(new BigInteger("3"))))
                         ),
                         Arrays.asList(
                                 new Ast.Function("f", Arrays.asList("z"), Arrays.asList(
                                         new Ast.Statement.Return(
                                                 new Ast.Expression.Binary("+",
                                                         new Ast.Expression.Binary("+",
-                                                                new Ast.Expression.Access(Optional.empty(), "x"),
+                                                                new Ast.Expression.Access(Optional.empty(), "w"),
                                                                 new Ast.Expression.Access(Optional.empty(), "y")),
                                                         new Ast.Expression.Access(Optional.empty(), "z")
                                                 ))
                                 )),
                                 new Ast.Function("main", Arrays.asList(), Arrays.asList(
-                                        new Ast.Statement.Assignment(
-                                                new Ast.Expression.Access(Optional.empty(), "y"),
-                                                new Ast.Expression.Literal(new BigInteger("4"))
+                                        new Ast.Statement.Declaration(
+                                                "y",
+                                                Optional.of(new Ast.Expression.Literal(new BigInteger("4")))
                                         ),
                                         new Ast.Statement.Return(new Ast.Expression.Function(
                                                 "f",
@@ -107,8 +107,26 @@ final class InterpreterTests {
                                         )))
                                 )
                         )
-                ), BigInteger.valueOf(8))
+                ), BigInteger.valueOf(8)),
+                //
+                Arguments.of("Empty", new Ast.Source(
+                    Arrays.asList(),
+                    Arrays.asList()
+                ), null)
         );
+    }
+
+    @Test
+    void testEmptySource() {
+
+        Scope scope = new Scope(null);
+        scope.defineFunction("main", 0, args -> {
+            return Environment.create(BigInteger.ZERO);
+        });
+
+        Ast.Source ast = new Ast.Source(Arrays.asList(), Arrays.asList());
+
+        test(ast, BigInteger.ZERO, scope);
     }
 
     @ParameterizedTest
@@ -242,6 +260,28 @@ final class InterpreterTests {
         ), Environment.NIL.getValue(), scope);
 
         Assertions.assertEquals(expected, scope.lookupVariable("list").getValue().getValue());
+    }
+
+    @Test
+    void testListReassignmentStatement() {
+        // LIST list = [1, 5, 10]
+        // list = [1, 5, 3];
+
+        List<Object> list = Arrays.asList(BigInteger.ONE, BigInteger.valueOf(5), BigInteger.TEN);
+        List<Ast.Expression> assignment = Arrays.asList(
+                new Ast.Expression.Literal(BigInteger.ONE),
+                new Ast.Expression.Literal(BigInteger.valueOf(5)),
+                new Ast.Expression.Literal(BigInteger.valueOf(3))
+        );
+
+        Scope scope = new Scope(null);
+        scope.defineVariable("list", true, Environment.create(list));
+        test(new Ast.Statement.Assignment(
+                new Ast.Expression.Access(Optional.empty(), "list"),
+                new Ast.Expression.PlcList(assignment)
+        ), null, scope);
+
+        Assertions.assertEquals(list, scope.lookupVariable("list").getValue().getValue());
     }
 
     @ParameterizedTest
@@ -390,6 +430,20 @@ final class InterpreterTests {
                         ),
                         false
                 ),
+                Arguments.of("And (Wrong type)",
+                        new Ast.Expression.Binary("&&",
+                                new Ast.Expression.Literal(true),
+                                new Ast.Expression.Literal(BigInteger.ZERO)
+                        ),
+                        null
+                ),
+                Arguments.of("Or",
+                        new Ast.Expression.Binary("||",
+                                new Ast.Expression.Literal(false),
+                                new Ast.Expression.Literal(true)
+                        ),
+                        true
+                ),
                 // TRUE || undefined
                 Arguments.of("Or (Short Circuit)",
                         new Ast.Expression.Binary("||",
@@ -406,11 +460,67 @@ final class InterpreterTests {
                         ),
                         true
                 ),
+                Arguments.of("Less Than (Equal)",
+                        new Ast.Expression.Binary("<",
+                                new Ast.Expression.Literal(BigInteger.ONE),
+                                new Ast.Expression.Literal(BigInteger.ONE)
+                        ),
+                        false
+                ),
+                Arguments.of("Greater Than",
+                        new Ast.Expression.Binary(">",
+                                new Ast.Expression.Literal(BigInteger.TEN),
+                                new Ast.Expression.Literal(BigInteger.ONE)
+                        ),
+                        true
+                ),
+                Arguments.of("Not same type",
+                        new Ast.Expression.Binary(">",
+                                new Ast.Expression.Literal(BigInteger.ONE),
+                                new Ast.Expression.Literal(BigDecimal.TEN)
+                        ),
+                        null
+                ),
                 // 1 == 10
                 Arguments.of("Equal",
                         new Ast.Expression.Binary("==",
                                 new Ast.Expression.Literal(BigInteger.ONE),
                                 new Ast.Expression.Literal(BigInteger.TEN)
+                        ),
+                        false
+                ),
+                Arguments.of("Not Equal",
+                        new Ast.Expression.Binary("!=",
+                                new Ast.Expression.Literal(BigInteger.ONE),
+                                new Ast.Expression.Literal(BigInteger.TEN)
+                        ),
+                        true
+                ),
+                Arguments.of("Not Equal",
+                        new Ast.Expression.Binary("!=",
+                                new Ast.Expression.Literal(BigInteger.TEN),
+                                new Ast.Expression.Literal(BigInteger.TEN)
+                        ),
+                        false
+                ),
+                Arguments.of("Equal (different types)",
+                        new Ast.Expression.Binary("==",
+                                new Ast.Expression.Literal(BigInteger.ONE),
+                                new Ast.Expression.Literal(BigDecimal.ONE)
+                        ),
+                        false
+                ),
+                Arguments.of("Equal (different types)",
+                        new Ast.Expression.Binary("==",
+                                new Ast.Expression.Literal(BigInteger.ONE),
+                                new Ast.Expression.Literal("1")
+                        ),
+                        false
+                ),
+                Arguments.of("Equal (different types)",
+                        new Ast.Expression.Binary("==",
+                                new Ast.Expression.Literal(BigInteger.ONE),
+                                new Ast.Expression.Literal("stringdoda")
                         ),
                         false
                 ),
@@ -422,6 +532,20 @@ final class InterpreterTests {
                         ),
                         "ab"
                 ),
+                Arguments.of("Concatenation",
+                        new Ast.Expression.Binary("+",
+                                new Ast.Expression.Literal("a"),
+                                new Ast.Expression.Literal(true)
+                        ),
+                        "atrue"
+                ),
+                Arguments.of("Concatenation",
+                        new Ast.Expression.Binary("+",
+                                new Ast.Expression.Literal(false),
+                                new Ast.Expression.Literal("b")
+                        ),
+                        "falseb"
+                ),
                 // 1 + 10
                 Arguments.of("Addition",
                         new Ast.Expression.Binary("+",
@@ -429,6 +553,41 @@ final class InterpreterTests {
                                 new Ast.Expression.Literal(BigInteger.TEN)
                         ),
                         BigInteger.valueOf(11)
+                ),
+                Arguments.of("Addition",
+                        new Ast.Expression.Binary("+",
+                                new Ast.Expression.Literal(BigDecimal.ONE),
+                                new Ast.Expression.Literal(BigDecimal.TEN)
+                        ),
+                        BigDecimal.valueOf(11)
+                ),
+                Arguments.of("Addition",
+                        new Ast.Expression.Binary("+",
+                                new Ast.Expression.Literal(BigInteger.ONE),
+                                new Ast.Expression.Literal(BigDecimal.TEN)
+                        ),
+                        null
+                ),
+                Arguments.of("Multiplication",
+                        new Ast.Expression.Binary("*",
+                                new Ast.Expression.Literal(BigInteger.ONE),
+                                new Ast.Expression.Literal(BigInteger.TEN)
+                        ),
+                        BigInteger.TEN
+                ),
+                Arguments.of("Subtraction",
+                        new Ast.Expression.Binary("-",
+                                new Ast.Expression.Literal(BigDecimal.ONE),
+                                new Ast.Expression.Literal(BigDecimal.TEN)
+                        ),
+                        BigDecimal.valueOf(-9)
+                ),
+                Arguments.of("Subtraction (Different Types)",
+                        new Ast.Expression.Binary("-",
+                                new Ast.Expression.Literal(BigInteger.ONE),
+                                new Ast.Expression.Literal(BigDecimal.TEN)
+                        ),
+                        null
                 ),
                 // 1.2 / 3.4
                 Arguments.of("Division",
@@ -438,6 +597,27 @@ final class InterpreterTests {
                         ),
                         new BigDecimal("0.4")
                 ),
+                Arguments.of("Division",
+                        new Ast.Expression.Binary("/",
+                                new Ast.Expression.Literal(new BigDecimal("1")),
+                                new Ast.Expression.Literal(new BigDecimal("8"))
+                        ),
+                        new BigDecimal("0")
+                ),
+                Arguments.of("Division",
+                        new Ast.Expression.Binary("/",
+                                new Ast.Expression.Literal(new BigInteger("1")),
+                                new Ast.Expression.Literal(new BigInteger("8"))
+                        ),
+                        new BigInteger("0")
+                ),
+                Arguments.of("Division",
+                        new Ast.Expression.Binary("/",
+                                new Ast.Expression.Literal(new BigInteger("8")),
+                                new Ast.Expression.Literal(new BigInteger("3"))
+                        ),
+                        new BigInteger("2")
+                ),
                 Arguments.of("Exponent Base Integer",
                         new Ast.Expression.Binary("^",
                                 new Ast.Expression.Literal(new BigInteger("2")),
@@ -445,19 +625,47 @@ final class InterpreterTests {
                         ),
                         new BigInteger("8")
                 ),
-                Arguments.of("Exponent Base Decimal",
+                Arguments.of("Base Integer Exponent Decimal",
                         new Ast.Expression.Binary("^",
                                 new Ast.Expression.Literal(new BigInteger("2")),
-                                new Ast.Expression.Literal(new BigInteger("3"))
+                                new Ast.Expression.Literal(new BigDecimal("3"))
                         ),
-                        new BigInteger("8")
+                        null
+                ),
+                Arguments.of("Exponent Base Decimal",
+                        new Ast.Expression.Binary("^",
+                                new Ast.Expression.Literal(new BigDecimal("1.5")),
+                                new Ast.Expression.Literal(new BigInteger("2"))
+                        ),
+                        new BigDecimal("2.25")
+                ),
+                Arguments.of("Base Decimal Exponent Decimal",
+                        new Ast.Expression.Binary("^",
+                                new Ast.Expression.Literal(new BigDecimal("2")),
+                                new Ast.Expression.Literal(new BigDecimal("3"))
+                        ),
+                        null
                 ),
                 Arguments.of("Negative Exponent",
                         new Ast.Expression.Binary("^",
                                 new Ast.Expression.Literal(new BigInteger("2")),
                                 new Ast.Expression.Literal(new BigInteger("-3"))
                         ),
-                        new BigInteger("8")
+                        new BigDecimal("0.125")
+                ),
+                Arguments.of("Negative Exponent",
+                        new Ast.Expression.Binary("^",
+                                new Ast.Expression.Literal(new BigDecimal("2")),
+                                new Ast.Expression.Literal(new BigInteger("-3"))
+                        ),
+                        new BigDecimal("0.125")
+                ),
+                Arguments.of("Non-terminating decimal expansion",
+                        new Ast.Expression.Binary("^",
+                                new Ast.Expression.Literal(new BigDecimal("2.1")),
+                                new Ast.Expression.Literal(new BigInteger("-4"))
+                        ),
+                        null
                 )
         );
     }
@@ -489,6 +697,28 @@ final class InterpreterTests {
         Scope scope = new Scope(null);
         scope.defineVariable("list", true, Environment.create(list));
         test(new Ast.Expression.Access(Optional.of(new Ast.Expression.Literal(BigInteger.valueOf(1))), "list"), BigInteger.valueOf(5), scope);
+    }
+
+    @Test
+    void testListAccessExpression2() {
+        // list[-11]
+
+        List<Object> list = Arrays.asList(BigInteger.ONE, BigInteger.valueOf(5), BigInteger.TEN);
+
+        Scope scope = new Scope(null);
+        scope.defineVariable("list", true, Environment.create(list));
+        test(new Ast.Expression.Access(Optional.of(new Ast.Expression.Literal(BigInteger.valueOf(-1))), "list"), null, scope);
+    }
+
+    @Test
+    void testListAccessExpression3() {
+        // list[-11]
+
+        List<Object> list = Arrays.asList(BigInteger.ONE, BigInteger.valueOf(5), BigInteger.TEN);
+
+        Scope scope = new Scope(null);
+        scope.defineVariable("list", true, Environment.create(list));
+        test(new Ast.Expression.Access(Optional.of(new Ast.Expression.Literal(BigInteger.valueOf(3))), "list"), null, scope);
     }
 
     @ParameterizedTest
