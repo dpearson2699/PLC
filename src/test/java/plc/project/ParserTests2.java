@@ -20,7 +20,7 @@ import java.util.stream.Stream;
  *
  * Tests the TYPED Parser grammar.
  */
-final class ParserTests2 {
+final class ParserTests {
 
     @ParameterizedTest
     @MethodSource
@@ -46,7 +46,7 @@ final class ParserTests2 {
                                 new Token(Token.Type.OPERATOR, ";", 21)
                         ),
                         new Ast.Source(
-                                Arrays.asList(new Ast.Global("name", false, Optional.of(new Ast.Expression.Access(Optional.empty(), "expr")))),
+                                Arrays.asList(new Ast.Global("name", "Type", false, Optional.of(new Ast.Expression.Access(Optional.empty(), "expr")))),
                                 Arrays.asList()
                         )
                 ),
@@ -488,7 +488,7 @@ final class ParserTests2 {
                 new Token(Token.Type.IDENTIFIER, "END", 129)
         );
         Ast.Source expected = new Ast.Source(
-                Arrays.asList(new Ast.Global("first", true, Optional.of(new Ast.Expression.Literal(BigInteger.ONE)))),
+                Arrays.asList(new Ast.Global("first", "Integer", true, Optional.of(new Ast.Expression.Literal(BigInteger.ONE)))),
                 Arrays.asList(new Ast.Function("main", Arrays.asList(), Arrays.asList(), Optional.of("Integer"), Arrays.asList(
                         new Ast.Statement.While(
                                 new Ast.Expression.Binary("!=",
