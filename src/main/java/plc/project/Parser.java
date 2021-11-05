@@ -84,7 +84,7 @@ public final class Parser {
      * next token declares a list, aka {@code LIST}.
      */
     public Ast.Global parseList() throws ParseException {
-        String name;
+        String name, type;
         ArrayList<Ast.Expression> elements = new ArrayList<Ast.Expression>();
 
         match("LIST");
@@ -95,6 +95,9 @@ public final class Parser {
             throw new ParseException("Expected identifier", errorIndex());
         }
         name = tokens.get(-1).getLiteral();
+
+        //type is required for global declarations
+        type = parseType();
 
         if (!match("=")) {
             throw new ParseException("Expected assignment operator", errorIndex());
@@ -113,7 +116,7 @@ public final class Parser {
             throw new ParseException("Expected closing bracket", errorIndex());
         }
 
-        return new Ast.Global(name, true, Optional.of(new Ast.Expression.PlcList(elements)));
+        return new Ast.Global(name, type, true, Optional.of(new Ast.Expression.PlcList(elements)));
     }
 
     /**
@@ -121,7 +124,7 @@ public final class Parser {
      * next token declares a mutable global variable, aka {@code VAR}.
      */
     public Ast.Global parseMutable() throws ParseException {
-        String name;
+        String name, type;
         Optional<Ast.Expression> value = Optional.empty();
 
         match("VAR");
@@ -131,12 +134,13 @@ public final class Parser {
         }
         name = tokens.get(-1).getLiteral();
 
+        type = parseType();
 
         if (match("=")) {
             value = Optional.of(parseExpression());
         }
 
-        return new Ast.Global(name, true, value);
+        return new Ast.Global(name, type, true, value);
     }
 
     /**
@@ -144,7 +148,7 @@ public final class Parser {
      * next token declares an immutable global variable, aka {@code VAL}.
      */
     public Ast.Global parseImmutable() throws ParseException {
-        String name;
+        String name, type;
         Optional<Ast.Expression> value;
 
         match("VAL");
@@ -154,6 +158,7 @@ public final class Parser {
         }
         name = tokens.get(-1).getLiteral();
 
+        type = parseType();
 
         if (!match("=")) {
             throw new ParseException("Expected assignment operator", errorIndex());
@@ -161,7 +166,7 @@ public final class Parser {
         }
         value = Optional.of(parseExpression());
 
-        return new Ast.Global(name, false, value);
+        return new Ast.Global(name, type, false, value);
 
     }
 
@@ -172,6 +177,8 @@ public final class Parser {
     public Ast.Function parseFunction() throws ParseException {
         String name;
         ArrayList<String> parameters = new ArrayList<String>();
+        ArrayList<String> parameterTypes = new ArrayList<String>();
+        Optional<String> returnType = Optional.empty();
         List<Ast.Statement> statements;
 
         match("FUN");
@@ -189,12 +196,20 @@ public final class Parser {
         if (match(Token.Type.IDENTIFIER)) {
             do {
                 parameters.add(tokens.get(-1).getLiteral());
+                parameterTypes.add(parseType());
             }
             while(match(",", Token.Type.IDENTIFIER));
         }
 
         if (!match(")")) {
             throw new ParseException("Expected closing parenthesis'", errorIndex());
+        }
+        //return type, if no match, then it is Optional.empty() (void/NIL return type)
+        if (match(":")) {
+            if (!match(Token.Type.IDENTIFIER)) {
+                throw new ParseException("Expected identifier", errorIndex());
+            }
+            returnType = Optional.of(tokens.get(-1).getLiteral());
         }
         if (!match("DO")) {
             throw new ParseException("Expected 'DO'", errorIndex());
@@ -207,7 +222,7 @@ public final class Parser {
             throw new ParseException("Expected 'END'", errorIndex());
         }
 
-        return new Ast.Function(name, parameters, statements);
+        return new Ast.Function(name, parameters, parameterTypes, returnType, statements);
     }
 
     /**
@@ -276,6 +291,7 @@ public final class Parser {
      */
     public Ast.Statement.Declaration parseDeclarationStatement() throws ParseException {
         String name;
+        Optional<String> type = Optional.empty();
         Optional<Ast.Expression> value = Optional.empty();
 
         match("LET");
@@ -285,6 +301,14 @@ public final class Parser {
         }
         name = tokens.get(-1).getLiteral();
 
+        //in local declaration, type is optional
+        if (match(":")) {
+            if (!match(Token.Type.IDENTIFIER)) {
+                throw new ParseException("Expected identifier that is a name of a type", errorIndex());
+            }
+            type = Optional.of(tokens.get(-1).getLiteral());
+        }
+
         if (match("=")) {
             value = Optional.of(parseExpression());
         }
@@ -292,7 +316,7 @@ public final class Parser {
             throw new ParseException("Expected semicolon", errorIndex());
         }
 
-        return new Ast.Statement.Declaration(name, value);
+        return new Ast.Statement.Declaration(name, type, value);
     }
 
     /**
@@ -699,6 +723,16 @@ public final class Parser {
         }
 
         return index;
+    }
+
+    private String parseType() {
+        if (!match(":")) {
+            throw new ParseException("Expected colon", errorIndex());
+        }
+        if (!match(Token.Type.IDENTIFIER)) {
+            throw new ParseException("Expected identifier", errorIndex());
+        }
+        return tokens.get(-1).getLiteral();
     }
 
     private static final class TokenStream {
