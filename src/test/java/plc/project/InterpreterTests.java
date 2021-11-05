@@ -665,7 +665,7 @@ final class InterpreterTests {
                                 new Ast.Expression.Literal(new BigDecimal("2.1")),
                                 new Ast.Expression.Literal(new BigInteger("-4"))
                         ),
-                        null
+                        0
                 )
         );
     }
