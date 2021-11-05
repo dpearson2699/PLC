@@ -20,7 +20,7 @@ import java.util.stream.Stream;
  *
  * Tests the TYPED Parser grammar.
  */
-final class ParserTests {
+final class ParserTests2 {
 
     @ParameterizedTest
     @MethodSource
