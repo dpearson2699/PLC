@@ -63,7 +63,7 @@ public final class AnalyzerTests {
 
     @ParameterizedTest(name = "{0}")
     @MethodSource
-    public void testGlobal(String test, Ast.Statement.Declaration ast, Ast.Statement.Declaration expected) {
+    public void testGlobal(String test, Ast.Global ast, Ast.Global expected) {
         Analyzer analyzer = test(ast, expected, new Scope(null));
         if (expected != null) {
             Assertions.assertEquals(expected.getVariable(), analyzer.scope.lookupVariable(expected.getName()));
@@ -318,7 +318,13 @@ public final class AnalyzerTests {
                                                                 new Ast.Expression.Literal('n')
                                                         )
                                                 )
-                                       )
+                                       ),
+                                        new Ast.Statement.Case(
+                                                Optional.empty(),
+                                                Arrays.asList(
+                                                        new Ast.Statement.Expression(new Ast.Expression.Function("print", Arrays.asList(new Ast.Expression.Literal("no"))))
+                                                )
+                                        )
                                 )
                         ),
                         new Ast.Statement.Switch(
@@ -335,6 +341,16 @@ public final class AnalyzerTests {
                                                         new Ast.Statement.Assignment(
                                                                 init(new Ast.Expression.Access(Optional.empty(), "letter"), ast -> ast.setVariable(new Environment.Variable("letter", "letter", Environment.Type.CHARACTER, true, Environment.create('y')))),
                                                                 init(new Ast.Expression.Literal('n'), ast -> ast.setType(Environment.Type.CHARACTER))
+                                                        )
+                                                )
+                                        ),
+                                        new Ast.Statement.Case(
+                                                Optional.empty(),
+                                                Arrays.asList(
+                                                        new Ast.Statement.Expression(
+                                                                init(new Ast.Expression.Function("print", Arrays.asList(init(new Ast.Expression.Literal("no"), ast -> ast.setType(Environment.Type.STRING)))),
+                                                                        ast -> ast.setFunction(new Environment.Function("print", "System.out.println", Arrays.asList(Environment.Type.ANY), Environment.Type.NIL, args -> Environment.NIL))
+                                                                )
                                                         )
                                                 )
                                         )
@@ -354,6 +370,12 @@ public final class AnalyzerTests {
                                                                 new Ast.Expression.Access(Optional.empty(), "letter"),
                                                                 new Ast.Expression.Literal('n')
                                                         )
+                                                )
+                                        ),
+                                        new Ast.Statement.Case(
+                                                Optional.empty(),
+                                                Arrays.asList(
+                                                        new Ast.Statement.Expression(new Ast.Expression.Function("print", Arrays.asList(new Ast.Expression.Literal("no"))))
                                                 )
                                         )
                                 )
