@@ -75,6 +75,8 @@ public final class Analyzer implements Ast.Visitor<Void> {
         throw new UnsupportedOperationException();  // TODO
     }
 
+    //how ?
+
     @Override
     public Void visit(Ast.Statement.Return ast) {
         throw new UnsupportedOperationException();  // TODO
@@ -146,6 +148,7 @@ public final class Analyzer implements Ast.Visitor<Void> {
         //how to check if lhs is a specific Environment.TYPE
 
         if (operator.equals("&&") || operator.equals("||")) {
+            requireAssignable(Environment.Type.BOOLEAN, lhs);
             requireAssignable(lhs, rhs);
             ast.setType(Environment.Type.BOOLEAN);
         }
@@ -153,6 +156,49 @@ public final class Analyzer implements Ast.Visitor<Void> {
             requireAssignable(Environment.Type.COMPARABLE, lhs);
             requireAssignable(lhs, rhs);
             ast.setType(Environment.Type.BOOLEAN);
+        }
+        else if (operator.equals("+")) {
+
+            if (lhs.getName().equals(Environment.Type.STRING.getName()) || rhs.getName().equals(Environment.Type.STRING.getName())) {
+                //rhs can be anything
+                ast.setType(Environment.Type.STRING);
+            }
+            else if (lhs.getName().equals(Environment.Type.INTEGER.getName())) {
+                requireAssignable(Environment.Type.INTEGER, rhs);
+                ast.setType(Environment.Type.INTEGER);
+            }
+            else if (lhs.getName().equals(Environment.Type.DECIMAL.getName())) {
+                requireAssignable(Environment.Type.DECIMAL, rhs);
+                ast.setType(Environment.Type.DECIMAL);
+            }
+            else {
+                throw new RuntimeException("Expected String/Integer/Decimal, received " + lhs.getName());
+            }
+        }
+        else if (operator.equals("-") || operator.equals("*") || operator.equals("/")) {
+
+            if (lhs.getName().equals(Environment.Type.INTEGER.getName())) {
+                requireAssignable(Environment.Type.INTEGER, rhs);
+                ast.setType(Environment.Type.INTEGER);
+            }
+            else if (lhs.getName().equals(Environment.Type.DECIMAL.getName())) {
+                requireAssignable(Environment.Type.DECIMAL, rhs);
+                ast.setType(Environment.Type.DECIMAL);
+            }
+            else {
+                throw new RuntimeException("Expected Integer/Decimal, received " + lhs.getName());
+            }
+        }
+        else {  //only other possible operator is '^'
+
+            requireAssignable(Environment.Type.INTEGER, rhs);
+
+            if (lhs.getName().equals(Environment.Type.INTEGER.getName())) {
+                ast.setType(Environment.Type.INTEGER);
+            }
+            else {
+                ast.setType(Environment.Type.DECIMAL);
+            }
         }
 
         return null;
@@ -184,14 +230,18 @@ public final class Analyzer implements Ast.Visitor<Void> {
     @Override
     public Void visit(Ast.Expression.Function ast) {
 
-        /*
-        //
-        if (ast.getArguments().size() > 0) {
+        List<Ast.Expression> arguments = ast.getArguments();
+        Environment.Function function = scope.lookupFunction(ast.getName(), arguments.size());
 
+        //if there are any arguments, make sure the type matches with the type of the corresponding parameter
+        if (arguments.size() > 0) {
+            for (int i = 0; i < arguments.size(); i++) {
+                visit(arguments.get(i));
+                requireAssignable(function.getParameterTypes().get(i), arguments.get(i).getType());
+            }
         }
 
-        ast.setFunction();
-         */
+        ast.setFunction(scope.lookupFunction(ast.getName(), ast.getArguments().size()));
 
         return null;
     }
@@ -219,9 +269,23 @@ public final class Analyzer implements Ast.Visitor<Void> {
     public static void requireAssignable(Environment.Type target, Environment.Type type) {
 
         //do we check for valid type names in here? where do we make Environment.Type
-        //better way to do this comparison than by string values?
+        //do we check for Comparable and Any here?
 
+        //better way to do this comparison than by string values?
         //can I use == since Environment.Type are all static objects?
+
+        if (target.getName().equals(Environment.Type.ANY.getName())) {
+            return;
+        }
+
+        if (target.getName().equals(Environment.Type.COMPARABLE.getName())) {
+            if (target.getName().equals(Environment.Type.INTEGER.getName())
+                    || target.getName().equals(Environment.Type.DECIMAL.getName())
+                    || target.getName().equals(Environment.Type.CHARACTER.getName())
+                    || target.getName().equals(Environment.Type.STRING.getName())) {
+                return;
+            }
+        }
 
         if (!(type.getName().equals(target.getName()))) {
             throw new RuntimeException("Expected " + target.getName() + ", received " + type.getName() + ".");
