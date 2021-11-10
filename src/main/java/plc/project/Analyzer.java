@@ -86,7 +86,31 @@ public final class Analyzer implements Ast.Visitor<Void> {
 
     @Override
     public Void visit(Ast.Statement.If ast) {
-        throw new UnsupportedOperationException();  // TODO
+        visit(ast.getCondition());
+        if(ast.getThenStatements().isEmpty()){
+            throw new RuntimeException("The then statement is empty");
+        }
+
+        requireAssignable(Environment.Type.BOOLEAN, ast.getCondition().getType());
+
+        try {
+            scope = new Scope(scope);
+            for (Ast.Statement thenStmt : ast.getThenStatements()){
+                visit(thenStmt);
+            }
+        } finally {
+            scope = scope.getParent();
+        }
+
+        try {
+            scope = new Scope(scope);
+            for (Ast.Statement elseStmt : ast.getElseStatements()){
+                visit(elseStmt);
+            }
+        } finally {
+            scope = scope.getParent();
+        }
+        return null;
     }
 
     @Override
