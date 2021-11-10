@@ -30,6 +30,8 @@ public final class Analyzer implements Ast.Visitor<Void> {
         throw new UnsupportedOperationException();  // TODO
     }
 
+    //only visit return after visiting function; set function
+
     @Override
     public Void visit(Ast.Global ast) {
         throw new UnsupportedOperationException();  // TODO
@@ -37,7 +39,34 @@ public final class Analyzer implements Ast.Visitor<Void> {
 
     @Override
     public Void visit(Ast.Function ast) {
-        throw new UnsupportedOperationException();  // TODO
+
+        List<String> parameterStrings = ast.getParameterTypeNames();
+        ArrayList<Environment.Type> parameterTypes = new ArrayList<Environment.Type>();
+        Environment.Type returnType = Environment.Type.NIL;
+
+        for (String i : parameterStrings) {
+            parameterTypes.add(Environment.getType(i));
+        }
+        if (ast.getReturnTypeName().isPresent()) {
+            returnType = Environment.getType(ast.getReturnTypeName().get());
+        }
+        Environment.Function func = scope.defineFunction(ast.getName(), ast.getName(), parameterTypes, returnType, args -> Environment.NIL);
+
+        try {
+            scope = new Scope(scope);
+            for (String param : ast.getParameters()) {
+                //scope.defineVariable(param);
+            }
+
+            for (Ast.Statement stmt : ast.getStatements()) {
+                visit(stmt);
+            }
+        }
+        finally {
+            scope = scope.getParent();
+        }
+
+        return null;
     }
 
     @Override
@@ -72,10 +101,21 @@ public final class Analyzer implements Ast.Visitor<Void> {
 
     @Override
     public Void visit(Ast.Statement.While ast) {
-        throw new UnsupportedOperationException();  // TODO
-    }
 
-    //how ?
+        visit(ast.getCondition());
+        requireAssignable(Environment.Type.BOOLEAN, ast.getCondition().getType());
+        try {
+            scope = new Scope(scope);
+            for (Ast.Statement stmt : ast.getStatements()) {
+                visit(stmt);
+            }
+        }
+        finally {
+            scope = scope.getParent();
+        }
+
+        return null;
+    }
 
     @Override
     public Void visit(Ast.Statement.Return ast) {
@@ -159,15 +199,15 @@ public final class Analyzer implements Ast.Visitor<Void> {
         }
         else if (operator.equals("+")) {
 
-            if (lhs.getName().equals(Environment.Type.STRING.getName()) || rhs.getName().equals(Environment.Type.STRING.getName())) {
+            if (lhs.equals(Environment.Type.STRING) || rhs.equals(Environment.Type.STRING)) {
                 //rhs can be anything
                 ast.setType(Environment.Type.STRING);
             }
-            else if (lhs.getName().equals(Environment.Type.INTEGER.getName())) {
+            else if (lhs.equals(Environment.Type.INTEGER)) {
                 requireAssignable(Environment.Type.INTEGER, rhs);
                 ast.setType(Environment.Type.INTEGER);
             }
-            else if (lhs.getName().equals(Environment.Type.DECIMAL.getName())) {
+            else if (lhs.equals(Environment.Type.DECIMAL)) {
                 requireAssignable(Environment.Type.DECIMAL, rhs);
                 ast.setType(Environment.Type.DECIMAL);
             }
@@ -177,11 +217,11 @@ public final class Analyzer implements Ast.Visitor<Void> {
         }
         else if (operator.equals("-") || operator.equals("*") || operator.equals("/")) {
 
-            if (lhs.getName().equals(Environment.Type.INTEGER.getName())) {
+            if (lhs.equals(Environment.Type.INTEGER)) {
                 requireAssignable(Environment.Type.INTEGER, rhs);
                 ast.setType(Environment.Type.INTEGER);
             }
-            else if (lhs.getName().equals(Environment.Type.DECIMAL.getName())) {
+            else if (lhs.equals(Environment.Type.DECIMAL)) {
                 requireAssignable(Environment.Type.DECIMAL, rhs);
                 ast.setType(Environment.Type.DECIMAL);
             }
@@ -193,7 +233,7 @@ public final class Analyzer implements Ast.Visitor<Void> {
 
             requireAssignable(Environment.Type.INTEGER, rhs);
 
-            if (lhs.getName().equals(Environment.Type.INTEGER.getName())) {
+            if (lhs.equals(Environment.Type.INTEGER)) {
                 ast.setType(Environment.Type.INTEGER);
             }
             else {
@@ -231,13 +271,13 @@ public final class Analyzer implements Ast.Visitor<Void> {
     public Void visit(Ast.Expression.Function ast) {
 
         List<Ast.Expression> arguments = ast.getArguments();
-        Environment.Function function = scope.lookupFunction(ast.getName(), arguments.size());
+        Environment.Function func = scope.lookupFunction(ast.getName(), arguments.size());
 
         //if there are any arguments, make sure the type matches with the type of the corresponding parameter
         if (arguments.size() > 0) {
             for (int i = 0; i < arguments.size(); i++) {
                 visit(arguments.get(i));
-                requireAssignable(function.getParameterTypes().get(i), arguments.get(i).getType());
+                requireAssignable(func.getParameterTypes().get(i), arguments.get(i).getType());
             }
         }
 
@@ -268,26 +308,21 @@ public final class Analyzer implements Ast.Visitor<Void> {
 
     public static void requireAssignable(Environment.Type target, Environment.Type type) {
 
-        //do we check for valid type names in here? where do we make Environment.Type
-        //do we check for Comparable and Any here?
-
-        //better way to do this comparison than by string values?
-        //can I use == since Environment.Type are all static objects?
-
-        if (target.getName().equals(Environment.Type.ANY.getName())) {
+        if (target.equals(Environment.Type.ANY)) {
             return;
         }
 
-        if (target.getName().equals(Environment.Type.COMPARABLE.getName())) {
-            if (target.getName().equals(Environment.Type.INTEGER.getName())
-                    || target.getName().equals(Environment.Type.DECIMAL.getName())
-                    || target.getName().equals(Environment.Type.CHARACTER.getName())
-                    || target.getName().equals(Environment.Type.STRING.getName())) {
+        if (target.equals(Environment.Type.COMPARABLE)) {
+            if (type.equals(Environment.Type.INTEGER)
+                    || type.equals(Environment.Type.DECIMAL)
+                    || type.equals(Environment.Type.CHARACTER)
+                    || type.equals(Environment.Type.STRING)
+            ) {
                 return;
             }
         }
 
-        if (!(type.getName().equals(target.getName()))) {
+        if (!(type.equals(target))) {
             throw new RuntimeException("Expected " + target.getName() + ", received " + type.getName() + ".");
         }
     }

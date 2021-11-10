@@ -270,6 +270,10 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
             Boolean lhs, rhs;
             lhs = requireType(Boolean.class, left);
 
+            if (!lhs && operator.equals("&&")) {    //short-circuiting: FALSE && ... is always FALSE
+                return Environment.create(new Boolean(false));
+            }
+
             if (lhs && operator.equals("||")) { //short-circuiting: TRUE || ... is always TRUE
                 return Environment.create(new Boolean(true));
             }
@@ -373,12 +377,20 @@ public class Interpreter implements Ast.Visitor<Environment.PlcObject> {
                 BigInteger lhs = (BigInteger)left.getValue();
                 BigInteger rhs = requireType(BigInteger.class, right);
 
+                if (rhs.equals(BigInteger.ZERO)) {
+                    throw new RuntimeException("Can't divide by zero.");
+                }
+
                 return Environment.create(lhs.divide(rhs));
             }
             else if (left.getValue() instanceof BigDecimal) {
 
                 BigDecimal lhs = (BigDecimal)left.getValue();
                 BigDecimal rhs = requireType(BigDecimal.class, right);
+
+                if (rhs.equals(BigDecimal.ZERO)) {
+                    throw new RuntimeException("Can't divide by zero.");
+                }
 
                 return Environment.create(lhs.divide(rhs, RoundingMode.HALF_EVEN));
             }
