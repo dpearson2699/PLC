@@ -87,12 +87,15 @@ public final class Analyzer implements Ast.Visitor<Void> {
     @Override
     public Void visit(Ast.Statement.If ast) {
         visit(ast.getCondition());
+        //make sure the then statement isn't empty
         if(ast.getThenStatements().isEmpty()){
             throw new RuntimeException("The then statement is empty");
         }
 
+        //make sure the condition is a boolean after checking if the then statemtent isn't empty
         requireAssignable(Environment.Type.BOOLEAN, ast.getCondition().getType());
 
+        //visit the then statement
         try {
             scope = new Scope(scope);
             for (Ast.Statement thenStmt : ast.getThenStatements()){
@@ -102,6 +105,7 @@ public final class Analyzer implements Ast.Visitor<Void> {
             scope = scope.getParent();
         }
 
+        //visit the else statement
         try {
             scope = new Scope(scope);
             for (Ast.Statement elseStmt : ast.getElseStatements()){
