@@ -44,18 +44,23 @@ public final class Analyzer implements Ast.Visitor<Void> {
         ArrayList<Environment.Type> parameterTypes = new ArrayList<Environment.Type>();
         Environment.Type returnType = Environment.Type.NIL;
 
-        for (String i : parameterStrings) {
-            parameterTypes.add(Environment.getType(i));
+        for (String paramType : parameterStrings) {
+            parameterTypes.add(Environment.getType(paramType));
         }
         if (ast.getReturnTypeName().isPresent()) {
             returnType = Environment.getType(ast.getReturnTypeName().get());
         }
         Environment.Function func = scope.defineFunction(ast.getName(), ast.getName(), parameterTypes, returnType, args -> Environment.NIL);
 
+        //where should this be positioned?
+        function = ast;
+
+        //what do we put for jvm name?
         try {
             scope = new Scope(scope);
-            for (String param : ast.getParameters()) {
-                //scope.defineVariable(param);
+            for (int i = 0; i < ast.getParameters().size(); i++) {
+                String param = ast.getParameters().get(i);
+                scope.defineVariable(param, param, parameterTypes.get(i), true, Environment.NIL);
             }
 
             for (Ast.Statement stmt : ast.getStatements()) {
@@ -119,7 +124,10 @@ public final class Analyzer implements Ast.Visitor<Void> {
 
     @Override
     public Void visit(Ast.Statement.Return ast) {
-        throw new UnsupportedOperationException();  // TODO
+        visit(ast.getValue());
+        requireAssignable(function.getFunction().getReturnType(), ast.getValue().getType());
+
+        return null;
     }
 
     @Override
