@@ -5,6 +5,7 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -51,9 +52,7 @@ public final class Analyzer implements Ast.Visitor<Void> {
             returnType = Environment.getType(ast.getReturnTypeName().get());
         }
         Environment.Function func = scope.defineFunction(ast.getName(), ast.getName(), parameterTypes, returnType, args -> Environment.NIL);
-
-        //where should this be positioned?
-        function = ast;
+        ast.setFunction(func);
 
         //what do we put for jvm name?
         try {
@@ -63,6 +62,7 @@ public final class Analyzer implements Ast.Visitor<Void> {
                 scope.defineVariable(param, param, parameterTypes.get(i), true, Environment.NIL);
             }
 
+            function = ast;
             for (Ast.Statement stmt : ast.getStatements()) {
                 visit(stmt);
             }
@@ -74,14 +74,45 @@ public final class Analyzer implements Ast.Visitor<Void> {
         return null;
     }
 
+    //why return an errors?
+
     @Override
     public Void visit(Ast.Statement.Expression ast) {
-        throw new UnsupportedOperationException();  // TODO
+        if (!(ast.getExpression() instanceof Ast.Expression.Function)) {
+            throw new RuntimeException("Expression not a function expression");
+        }
+        visit(ast.getExpression());
+
+        return null;
     }
 
     @Override
     public Void visit(Ast.Statement.Declaration ast) {
-        throw new UnsupportedOperationException();  // TODO
+
+        Optional<String> optTypeName = ast.getTypeName();
+        Optional<Ast.Expression> optValue = ast.getValue();
+
+        if (!optTypeName.isPresent() && !optValue.isPresent()) {
+            throw new RuntimeException("Declaration must have type or value to infer type.");
+        }
+        Environment.Type type = null;
+
+        if (optTypeName.isPresent()) {
+            type = Environment.getType(optTypeName.get());
+        }
+
+        if (ast.getValue().isPresent()) {
+            visit(ast.getValue().get());
+
+            if (type == null) {
+                type = ast.getValue().get().getType();
+            }
+            requireAssignable(type, ast.getValue().get().getType());
+        }
+
+        ast.setVariable(scope.defineVariable(ast.getName(), ast.getName(), type, true, Environment.NIL));
+
+        return null;
     }
 
     @Override
