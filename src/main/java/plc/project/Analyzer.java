@@ -53,7 +53,22 @@ public final class Analyzer implements Ast.Visitor<Void> {
 
     @Override
     public Void visit(Ast.Global ast) {
-        throw new UnsupportedOperationException();  // TODO
+        //The variable's name and jvmName are both the name of the global. DONE
+        //The variable's type is the type registered in the Environment with the same name as the one in the AST. DONE
+        //The variable's value is Environment.NIL (since it is not used by the analyzer) DONE
+        //Additionally, throws a RuntimeException if the value, if present, is not assignable to the global. For a value to be assignable, it's type must be a subtype of the global's type as defined above. DONE
+        //The value of the global, if present, must be visited before the variable is defined (otherwise, the global would be used before it was initialized). DONE
+        Environment.Type type = Environment.getType(ast.getTypeName());
+
+        if(ast.getValue().isPresent()){
+            visit(ast.getValue().get());
+            Ast.Expression value = ast.getValue().get();
+            requireAssignable(type, value.getType());
+        }
+
+        ast.setVariable(scope.defineVariable(ast.getName(), ast.getName(), type, ast.getMutable(), Environment.NIL));
+
+        return null;
     }
 
     @Override
@@ -135,7 +150,17 @@ public final class Analyzer implements Ast.Visitor<Void> {
 
     @Override
     public Void visit(Ast.Statement.Assignment ast) {
-        throw new UnsupportedOperationException();  // TODO
+        //Throws a RuntimeException if the receiver is not an access expression (since any other type is not assignable).
+        if (!(ast.getReceiver() instanceof Ast.Expression.Access)) {
+            throw new RuntimeException("Only access expressions are assignable.");
+        }
+
+        //Throws a RuntimeException if the value is not assignable to the receiver.
+        visit(ast.getReceiver());
+        visit(ast.getValue());
+        requireAssignable(ast.getReceiver().getType(), ast.getValue().getType());
+
+        return null;
     }
 
     @Override
@@ -173,12 +198,42 @@ public final class Analyzer implements Ast.Visitor<Void> {
 
     @Override
     public Void visit(Ast.Statement.Switch ast) {
-        throw new UnsupportedOperationException();  // TODO
+        visit(ast.getCondition());
+
+        //Throws a RuntimeException if the last case contains a value.  Recall, the final case statement is the default, therefore the value must be empty.
+        int size = ast.getCases().size();
+        if (ast.getCases().get(size-1).getValue().isPresent()) {
+            throw new RuntimeException("Final case statement must be default and cannot have a value.");
+        }
+
+
+        //Throws a RuntimeException if the condition defines the value type for each case. If the type of the condition does not match any of the case value types.
+        for (Ast.Statement.Case i : ast.getCases()) {
+
+            //make sure case that is being checked is not the default value
+            if (i.getValue().isPresent()) {
+                visit(i.getValue().get());
+                requireAssignable(ast.getCondition().getType(), i.getValue().get().getType());
+            }
+
+            visit(i);
+        }
+
+        return null;
     }
 
     @Override
     public Void visit(Ast.Statement.Case ast) {
-        throw new UnsupportedOperationException();  // TODO
+
+        try {
+            scope = new Scope(scope);
+            ast.getStatements().forEach(this::visit);
+        }
+        finally {
+            scope = scope.getParent();
+        }
+
+        return null;
     }
 
     @Override
