@@ -28,7 +28,25 @@ public final class Analyzer implements Ast.Visitor<Void> {
 
     @Override
     public Void visit(Ast.Source ast) {
-        throw new UnsupportedOperationException();  // TODO
+        //Check if main/0 function (name = main, arity = 0) does not exist
+        if(scope.lookupFunction("main", 0) == null){
+            throw new RuntimeException();
+        }
+
+        //Check if main/0 function does not have an Integer return type
+        requireAssignable(Environment.Type.INTEGER, scope.lookupFunction("main", 0).getReturnType());
+
+        //visit global first
+        for(Ast.Global global : ast.getGlobals()){
+            visit(global);
+        }
+
+        //visit function second
+        for(Ast.Function fun : ast.getFunctions()){
+            visit(fun);
+        }
+
+        return null;
     }
 
     //only visit return after visiting function; set function
