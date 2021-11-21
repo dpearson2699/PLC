@@ -53,11 +53,6 @@ public final class Analyzer implements Ast.Visitor<Void> {
 
     @Override
     public Void visit(Ast.Global ast) {
-        //The variable's name and jvmName are both the name of the global. DONE
-        //The variable's type is the type registered in the Environment with the same name as the one in the AST. DONE
-        //The variable's value is Environment.NIL (since it is not used by the analyzer) DONE
-        //Additionally, throws a RuntimeException if the value, if present, is not assignable to the global. For a value to be assignable, it's type must be a subtype of the global's type as defined above. DONE
-        //The value of the global, if present, must be visited before the variable is defined (otherwise, the global would be used before it was initialized). DONE
         Environment.Type type = Environment.getType(ast.getTypeName());
 
         if(ast.getValue().isPresent()){
@@ -87,7 +82,6 @@ public final class Analyzer implements Ast.Visitor<Void> {
         Environment.Function func = scope.defineFunction(ast.getName(), ast.getName(), parameterTypes, returnType, args -> Environment.NIL);
         ast.setFunction(func);
 
-        //what do we put for jvm name?
         try {
             scope = new Scope(scope);
             for (int i = 0; i < ast.getParameters().size(); i++) {
@@ -106,8 +100,6 @@ public final class Analyzer implements Ast.Visitor<Void> {
 
         return null;
     }
-
-    //why return an errors?
 
     @Override
     public Void visit(Ast.Statement.Expression ast) {
@@ -290,6 +282,11 @@ public final class Analyzer implements Ast.Visitor<Void> {
 
             //doubleValue returns NEGATIVE_INFINITY or POSITIVE_INFINITY if BigDecimal value out of range
             Double doub = ((BigDecimal) ast.getLiteral()).doubleValue();
+            /*
+            if (doub.isInfinite()) {
+                throw new RuntimeException("Decimal out of range");
+            }
+             */
             if (doub.equals(Double.NEGATIVE_INFINITY) || doub.equals(Double.POSITIVE_INFINITY)) {   //need equals()???
                 throw new RuntimeException("Decimal out of range");
             }
@@ -376,8 +373,11 @@ public final class Analyzer implements Ast.Visitor<Void> {
             if (lhs.equals(Environment.Type.INTEGER)) {
                 ast.setType(Environment.Type.INTEGER);
             }
-            else {
+            else if (lhs.equals(Environment.Type.DECIMAL)) {
                 ast.setType(Environment.Type.DECIMAL);
+            }
+            else {
+                throw new RuntimeException("Expected Integer/Decimal, received " + lhs.getName());
             }
         }
 

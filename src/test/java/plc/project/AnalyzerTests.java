@@ -407,6 +407,10 @@ public final class AnalyzerTests {
                         // 9223372036854775807
                         new Ast.Expression.Literal(BigInteger.valueOf(Long.MAX_VALUE)),
                         null
+                ),
+                Arguments.of("Decimal Invalid",
+                        new Ast.Expression.Literal(BigDecimal.valueOf(Double.MAX_VALUE).multiply(BigDecimal.valueOf(1.5))),
+                        null
                 )
         );
     }
@@ -437,6 +441,16 @@ public final class AnalyzerTests {
                                 new Ast.Expression.Literal("FALSE")
                         ),
                         null
+                ),
+                Arguments.of("Greater than",
+                        new Ast.Expression.Binary(">",
+                                new Ast.Expression.Literal('c'),
+                                new Ast.Expression.Literal('a')
+                        ),
+                        init(new Ast.Expression.Binary(">",
+                                init(new Ast.Expression.Literal('c'), ast -> ast.setType(Environment.Type.CHARACTER)),
+                                init(new Ast.Expression.Literal('a'), ast -> ast.setType(Environment.Type.CHARACTER))
+                        ), ast -> ast.setType(Environment.Type.BOOLEAN))
                 ),
                 Arguments.of("String Concatenation",
                         // "Ben" + 10
