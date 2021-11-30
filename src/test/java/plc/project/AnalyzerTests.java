@@ -57,6 +57,28 @@ public final class AnalyzerTests {
                                 )
                         ),
                         null
+                ),
+                //THIS SHOULD FAIL
+                // VAR num: Integer = 1; FUN main(): Integer DO print(num); END
+                Arguments.of("Global Use",
+                        new Ast.Source(
+                                Arrays.asList(
+                                        new Ast.Global("num", "Integer", true, Optional.of(new Ast.Expression.Literal(new BigInteger("1"))))
+                                ),
+                                Arrays.asList(
+                                        new Ast.Function("main", Arrays.asList(), Arrays.asList(), Optional.of("Integer"), Arrays.asList(
+                                                new Ast.Statement.Expression(
+                                                        new Ast.Expression.Function(
+                                                                "print",
+                                                                Arrays.asList(
+                                                                        new Ast.Expression.Access(Optional.empty(), "num"))
+                                                                )
+                                                        )
+                                                )
+                                        )
+                                )
+                        ),
+                        null
                 )
         );
     }
