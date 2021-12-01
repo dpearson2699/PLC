@@ -204,6 +204,22 @@ public class GeneratorTests {
 
     @ParameterizedTest(name = "{0}")
     @MethodSource
+    void testLiteralExpression(String test, Ast.Expression.Literal ast, String expected) {
+        test(ast, expected);
+    }
+
+    private static Stream<Arguments> testLiteralExpression() {
+        return Stream.of(
+                Arguments.of("null",
+                        // null
+                        init(new Ast.Expression.Literal(null), ast -> ast.setType(Environment.Type.NIL)),
+                        "null"
+                )
+        );
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource
     void testBinaryExpression(String test, Ast.Expression.Binary ast, String expected) {
         test(ast, expected);
     }
@@ -225,6 +241,23 @@ public class GeneratorTests {
                                 init(new Ast.Expression.Literal(BigInteger.TEN), ast -> ast.setType(Environment.Type.INTEGER))
                         ), ast -> ast.setType(Environment.Type.STRING)),
                         "\"Ben\" + 10"
+                ),
+                Arguments.of("Power",
+                        // 2.0 ^ 3
+                        init(new Ast.Expression.Binary("^",
+                                init(new Ast.Expression.Literal(new BigDecimal("2.0")), ast -> ast.setType(Environment.Type.DECIMAL)),
+                                init(new Ast.Expression.Literal(new BigInteger("3")), ast -> ast.setType(Environment.Type.INTEGER))
+                        ), ast -> ast.setType(Environment.Type.DECIMAL)),
+                        "Math.pow(2.0, 3)"
+                ),
+                //this isn't possible, Analyzer requires Boolean rhs and lhs of operator
+                Arguments.of("OR",
+                        // null || TRUE
+                        init(new Ast.Expression.Binary("||",
+                                init(new Ast.Expression.Literal(null), ast -> ast.setType(Environment.Type.NIL)),
+                                init(new Ast.Expression.Literal(true), ast -> ast.setType(Environment.Type.BOOLEAN))
+                        ), ast -> ast.setType(Environment.Type.BOOLEAN)),
+                        "null || true"
                 )
         );
     }
@@ -243,6 +276,13 @@ public class GeneratorTests {
                                 init(new Ast.Expression.Literal("Hello, World!"), ast -> ast.setType(Environment.Type.STRING))
                         )), ast -> ast.setFunction(new Environment.Function("print", "System.out.println", Arrays.asList(Environment.Type.ANY), Environment.Type.NIL, args -> Environment.NIL))),
                         "System.out.println(\"Hello, World!\")"
+                ),
+                Arguments.of("Empty Print",
+                        // print()
+                        init(new Ast.Expression.Function("print", Arrays.asList(
+
+                        )), ast -> ast.setFunction(new Environment.Function("print", "System.out.println", Arrays.asList(), Environment.Type.NIL, args -> Environment.NIL))),
+                        "System.out.println()"
                 )
         );
     }
