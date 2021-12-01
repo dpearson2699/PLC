@@ -1,6 +1,7 @@
 package plc.project;
 
 import java.io.PrintWriter;
+import java.util.List;
 
 public final class Generator implements Ast.Visitor<Void> {
 
@@ -164,7 +165,18 @@ public final class Generator implements Ast.Visitor<Void> {
 
     @Override
     public Void visit(Ast.Expression.Literal ast) {
-        throw new UnsupportedOperationException(); //TODO
+
+        if (ast.getLiteral() instanceof String || ast.getLiteral() instanceof Character) {
+            print("\"", ast.getLiteral(), "\"");
+        }
+        else if (ast.getLiteral() == null ) {   //calling toString on null object throws a null pointer exception
+            print("null");
+        }
+        else {  //toString on BigDecimal and BigInteger gives accurate value
+            print(ast.getLiteral());
+        }
+
+        return null;
     }
 
     @Override
@@ -176,17 +188,46 @@ public final class Generator implements Ast.Visitor<Void> {
 
     @Override
     public Void visit(Ast.Expression.Binary ast) {
-        throw new UnsupportedOperationException(); //TODO
+
+        if (ast.getOperator().equals("^")) {
+            print("Math.pow(", ast.getLeft(), ", ", ast.getRight(), ")");
+        }
+        else {
+            print(ast.getLeft(), " ", ast.getOperator(), " ", ast.getRight());
+        }
+
+        return null;
     }
 
     @Override
     public Void visit(Ast.Expression.Access ast) {
-        throw new UnsupportedOperationException(); //TODO
+
+        print(ast.getVariable().getJvmName());
+
+        if (ast.getOffset().isPresent()) {  //accessing a list
+            print("[", ast.getOffset().get(), "]");
+        }
+
+        return null;
     }
 
     @Override
     public Void visit(Ast.Expression.Function ast) {
-        throw new UnsupportedOperationException(); //TODO
+
+        print(ast.getFunction().getJvmName(), "(");
+
+        List<Ast.Expression> arguments = ast.getArguments();
+        int arity = arguments.size();
+        if (arity > 0) {
+            for (int i = 0; i < arity - 1; i++) {
+                print(arguments.get(i), ", ");
+            }
+            print(arguments.get(arity - 1));
+        }
+
+        print(")");
+
+        return null;
     }
 
     @Override
@@ -208,5 +249,3 @@ public final class Generator implements Ast.Visitor<Void> {
     }
 
 }
-
-//bing bong 2
