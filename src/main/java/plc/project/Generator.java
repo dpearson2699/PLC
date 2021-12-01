@@ -154,7 +154,7 @@ public final class Generator implements Ast.Visitor<Void> {
     @Override
     public Void visit(Ast.Statement.Case ast) {
         if(ast.getValue().isPresent()){
-            print("case ", ast.getValue(), ":");
+            print("case ", ast.getValue().get(), ":");
         }
         else{
             print("default:");
@@ -200,8 +200,11 @@ public final class Generator implements Ast.Visitor<Void> {
     @Override
     public Void visit(Ast.Expression.Literal ast) {
 
-        if (ast.getLiteral() instanceof String || ast.getLiteral() instanceof Character) {
+        if (ast.getLiteral() instanceof String) {
             print("\"", ast.getLiteral(), "\"");
+        }
+        else if (ast.getLiteral() instanceof Character) {
+            print("\'", ast.getLiteral(), "\'");
         }
         else if (ast.getLiteral() == null ) {   //calling toString on null object throws a null pointer exception
             print("null");
