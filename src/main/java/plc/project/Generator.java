@@ -90,9 +90,7 @@ public final class Generator implements Ast.Visitor<Void> {
 
     @Override
     public Void visit(Ast.Statement.If ast) {
-        print("if (");
-        print(ast.getCondition());
-        print(") {");
+        print("if (", ast.getCondition(), ") {");
         indent += 1;
 
         //generation of then statements
@@ -139,9 +137,7 @@ public final class Generator implements Ast.Visitor<Void> {
 
     @Override
     public Void visit(Ast.Statement.Return ast) {
-        print("return ");
-        print(ast.getValue());
-        print(";");
+        print("return ", ast.getValue(), ";");
         return null;
     }
 
@@ -152,9 +148,7 @@ public final class Generator implements Ast.Visitor<Void> {
 
     @Override
     public Void visit(Ast.Expression.Group ast) {
-        print("(");
-        print(ast.getExpression());
-        print(")");
+        print("(", ast.getExpression(), ")");
 
         return null;
     }
