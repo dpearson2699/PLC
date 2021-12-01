@@ -176,7 +176,20 @@ public final class Generator implements Ast.Visitor<Void> {
 
     @Override
     public Void visit(Ast.Expression.PlcList ast) {
-        throw new UnsupportedOperationException(); //TODO
+        print("{");
+
+        //can't use for each loop bc need to know when at last value
+        for(int i = 0; i < ast.getValues().size(); i++){
+            print(ast.getValues().get(i));
+            //make sure value is not the last so to print a comma in the list
+            if(i < ast.getValues().size() - 1){
+                print(", ");
+            }
+        }
+
+        print("}");
+
+        return null;
     }
 
 }
