@@ -49,7 +49,6 @@ public final class Generator implements Ast.Visitor<Void> {
         newline(indent);
         print("}");
 
-
         newline(0);
         for(Ast.Function function : ast.getFunctions()){
             newline(indent);
@@ -66,18 +65,71 @@ public final class Generator implements Ast.Visitor<Void> {
 
     @Override
     public Void visit(Ast.Global ast) {
-        throw new UnsupportedOperationException(); //TODO
+        String typeName = ast.getVariable().getType().getJvmName();
+        String varName = ast.getVariable().getJvmName();
+
+        //don't need to throw any errors; already handled by analyzer
+        if (ast.getValue().isPresent() && ast.getValue().get() instanceof Ast.Expression.PlcList) { //list variables
+            print(typeName, "[] ", varName, " = ", ast.getValue().get());
+        }
+        else {  //mutable and immutable variables
+
+            if (!ast.getMutable()) {
+                print("final ");
+            }
+
+            print(typeName, " ", varName);
+
+            //immutable will always be initialized, but need check for mutable
+            if (ast.getValue().isPresent()) {
+                print(" = ", ast.getValue().get());
+            }
+        }
+
+        print (";");
+        return null;
     }
 
     @Override
     public Void visit(Ast.Function ast) {
-        throw new UnsupportedOperationException(); //TODO
+        print(ast.getFunction().getReturnType().getJvmName(), " ", ast.getFunction().getJvmName());
+
+        //method parameters
+        print("(");
+        List<String> arguments = ast.getParameters();
+        int arity = arguments.size();
+        if (arity > 0) {
+            for (int i = 0; i < arity - 1; i++) {
+                print(ast.getFunction().getParameterTypes().get(i).getJvmName(), " ", arguments.get(i), ", ");
+            }
+            print(arguments.get(arity - 1));
+        }
+        print(")");
+
+        //statement block
+        print(" {");
+        if(!ast.getStatements().isEmpty()){
+            newline(++indent);
+            for(int i = 0; i < ast.getStatements().size(); i++){
+                if(i != 0){
+                    newline(indent);
+                }
+                print(ast.getStatements().get(i));
+            }
+            newline(--indent);
+        }
+        print("}");
+
+        return null;
     }
+
+    //possible helper functions for refactoring:
+    //comma-separated list
+    //printing statement block
 
     @Override
     public Void visit(Ast.Statement.Expression ast) {
         print(ast.getExpression(), ";");
-
         return null;
     }
 
@@ -96,7 +148,6 @@ public final class Generator implements Ast.Visitor<Void> {
     @Override
     public Void visit(Ast.Statement.Assignment ast) {
         print(ast.getReceiver(), " = ", ast.getValue(), ";");
-
         return null;
     }
 
@@ -105,7 +156,7 @@ public final class Generator implements Ast.Visitor<Void> {
         print("if (", ast.getCondition(), ") {");
         indent += 1;
 
-        //generation of then statements
+        //generation of then statements (analyzer does not allow for empty then statement)
         for(Ast.Statement stmt : ast.getThenStatements()){
             newline(indent);
             print(stmt);

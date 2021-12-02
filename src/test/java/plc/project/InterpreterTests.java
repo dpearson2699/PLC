@@ -660,6 +660,7 @@ final class InterpreterTests {
                         ),
                         new BigDecimal("0.125")
                 ),
+                //should we add handler in Interpreter to print custom error message?
                 Arguments.of("Non-terminating decimal expansion",
                         new Ast.Expression.Binary("^",
                                 new Ast.Expression.Literal(new BigDecimal("2.1")),

@@ -59,6 +59,63 @@ public class GeneratorTests {
         );
     }
 
+    @ParameterizedTest(name = "{0}")
+    @MethodSource
+    void testGlobal(String test, Ast.Global ast, String expected) {
+        test(ast, expected);
+    }
+
+    private static Stream<Arguments> testGlobal() {
+        return Stream.of(
+                Arguments.of("mutable",
+                        // VAR x: String;
+                        init(
+                                new Ast.Global("x", "String", true, Optional.empty()),
+                                ast -> ast.setVariable(new Environment.Variable("x", "x", Environment.Type.STRING, true, Environment.NIL))
+                        ),
+                        "String x;"
+                ),
+                Arguments.of("initialized mutable",
+                        // VAR x: String = "Test";
+                        init(
+                                new Ast.Global("x", "String", true, Optional.of(new Ast.Expression.Literal("Test"))),
+                                ast -> ast.setVariable(new Environment.Variable("x", "x", Environment.Type.STRING, true, Environment.NIL))
+                        ),
+                        "String x = \"Test\";"
+                ),
+                Arguments.of("immutable",
+                        // VAL y: Boolean = TRUE && FALSE;
+                        init(
+                                new Ast.Global("y", "Boolean", false, Optional.of(new Ast.Expression.Binary("&&", new Ast.Expression.Literal(true), new Ast.Expression.Literal(false)))),
+                                ast -> ast.setVariable(new Environment.Variable("y", "y", Environment.Type.BOOLEAN, false, Environment.NIL))
+                        ),
+                        "final boolean y = true && false;"
+                )
+        );
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource
+    void testFunction(String test, Ast.Function ast, String expected) {
+        test(ast, expected);
+    }
+
+    private static Stream<Arguments> testFunction() {
+        return Stream.of(
+                Arguments.of("empty",
+                        // FUN empty() DO
+                        // END
+                        init(
+                                new Ast.Function("empty", Arrays.asList(), Arrays.asList(), Optional.empty(), Arrays.asList()),
+                                ast -> ast.setFunction(new Environment.Function("empty", "empty", Arrays.asList(), Environment.Type.NIL, args -> Environment.NIL))
+                        ),
+                        String.join(System.lineSeparator(),
+                                "Void empty() {}"
+                        )
+                )
+        );
+    }
+
     @Test
     void testList() {
         // LIST list: Decimal = [1.0, 1.5, 2.0];
