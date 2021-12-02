@@ -55,7 +55,61 @@ public class GeneratorTests {
                                 "",
                                 "}"
                         )
+                ),
+                Arguments.of("Multiple globals and functions",
+                        // VAR x: Integer;
+                        // VAR y: Decimal;
+                        // VAR z: String;
+                        // FUN f(): Integer DO RETURN x; END
+                        // FUN g(): Decimal DO RETURN y; END
+                        // FUN h(): String DO RETURN z; END
+                        // FUN main(): Integer DO END
+                        new Ast.Source(
+                                Arrays.asList(
+                                        init(new Ast.Global("x", "Integer",true, Optional.empty()), ast -> ast.setVariable(new Environment.Variable("x", "x", Environment.Type.INTEGER, true, Environment.NIL))),
+                                        init(new Ast.Global("y", "Decimal",true, Optional.empty()), ast -> ast.setVariable(new Environment.Variable("y", "y", Environment.Type.DECIMAL, true, Environment.NIL))),
+                                        init(new Ast.Global("z", "String",true, Optional.empty()), ast -> ast.setVariable(new Environment.Variable("z", "z", Environment.Type.STRING, true, Environment.NIL)))
+                                ),
+                                Arrays.asList(
+                                        init(new Ast.Function("f", Arrays.asList(), Arrays.asList(), Optional.of("Integer"), Arrays.asList(
+                                                new Ast.Statement.Return(init(new Ast.Expression.Access(Optional.empty(), "x"), ast -> ast.setVariable(new Environment.Variable("x", "x", Environment.Type.INTEGER, true, Environment.NIL))))
+                                        )
+                                        ), ast -> ast.setFunction(new Environment.Function("f", "f", Arrays.asList(), Environment.Type.INTEGER, args -> Environment.NIL))),
+
+                                        init(new Ast.Function("g", Arrays.asList(), Arrays.asList(), Optional.of("Decimal"), Arrays.asList(
+                                                new Ast.Statement.Return(init(new Ast.Expression.Access(Optional.empty(), "y"), ast -> ast.setVariable(new Environment.Variable("y", "y", Environment.Type.DECIMAL, true, Environment.NIL))))
+                                        )
+                                        ), ast -> ast.setFunction(new Environment.Function("g", "g", Arrays.asList(), Environment.Type.DECIMAL, args -> Environment.NIL))),
+
+                                        init(new Ast.Function("h", Arrays.asList(), Arrays.asList(), Optional.of("String"), Arrays.asList(
+                                                new Ast.Statement.Return(init(new Ast.Expression.Access(Optional.empty(), "z"), ast -> ast.setVariable(new Environment.Variable("z", "z", Environment.Type.STRING, true, Environment.NIL))))
+                                        )
+                                        ), ast -> ast.setFunction(new Environment.Function("h", "h", Arrays.asList(), Environment.Type.STRING, args -> Environment.NIL))),
+
+                                        init(new Ast.Function("main", Arrays.asList(), Arrays.asList(), Optional.of("Integer"), Arrays.asList()), ast -> ast.setFunction(new Environment.Function("main", "main", Arrays.asList(), Environment.Type.INTEGER, args -> Environment.NIL))))
+                        ),
+                        String.join(System.lineSeparator(),
+                                "public class Main {",
+                                "",
+                                "    int x;",
+                                "    double y;",
+                                "    String z;",
+                                "",
+                                "    public static void main(String[] args) {",
+                                "        System.exit(new Main().main());",
+                                "    }",
+                                "",
+                                "    int f() {",
+                                "        ",
+                                "    int main() {",
+                                "        System.out.println(\"Hello, World!\");",
+                                "        return 0;",
+                                "    }",
+                                "",
+                                "}"
+                        )
                 )
+
         );
     }
 
@@ -111,6 +165,88 @@ public class GeneratorTests {
                         ),
                         String.join(System.lineSeparator(),
                                 "Void empty() {}"
+                        )
+                ),
+                Arguments.of("Square",
+                        // FUN square(num: Decimal): Decimal DO
+                        //     RETURN num * num;
+                        // END
+                        init(
+                                new Ast.Function("square", Arrays.asList("num"), Arrays.asList("Decimal"), Optional.of("Decimal"), Arrays.asList(
+                                        new Ast.Statement.Return(
+                                                init(new Ast.Expression.Binary("*",
+                                                        init(new Ast.Expression.Access(Optional.empty(), "num"), ast -> ast.setVariable(new Environment.Variable("num", "num", Environment.Type.DECIMAL, true, Environment.NIL))),
+                                                        init(new Ast.Expression.Access(Optional.empty(), "num"), ast -> ast.setVariable(new Environment.Variable("num", "num", Environment.Type.DECIMAL, true, Environment.NIL)))
+                                                ), ast -> ast.setType(Environment.Type.DECIMAL))
+                                        )
+                                )),
+                                ast -> ast.setFunction(new Environment.Function("square", "square", Arrays.asList(Environment.Type.DECIMAL), Environment.Type.DECIMAL, args -> Environment.NIL))
+                        ),
+                        String.join(System.lineSeparator(),
+                                "double square(double num) {",
+                                "    return num * num;",
+                                "}"
+                        )
+                ),
+                Arguments.of("Multiple arguments",
+                        // FUN multiply(num1: Integer, num2: Integer): Integer DO
+                        //     RETURN num1 * num2;
+                        // END
+                        init(
+                                new Ast.Function("multiply", Arrays.asList("num1", "num2"), Arrays.asList("Integer", "Integer"), Optional.of("Integer"), Arrays.asList(
+                                        new Ast.Statement.Return(
+                                                init(new Ast.Expression.Binary("*",
+                                                        init(new Ast.Expression.Access(Optional.empty(), "num1"), ast -> ast.setVariable(new Environment.Variable("num1", "num1", Environment.Type.INTEGER, true, Environment.NIL))),
+                                                        init(new Ast.Expression.Access(Optional.empty(), "num2"), ast -> ast.setVariable(new Environment.Variable("num2", "num2", Environment.Type.INTEGER, true, Environment.NIL)))
+                                                ), ast -> ast.setType(Environment.Type.INTEGER))
+                                        )
+                                )),
+                                ast -> ast.setFunction(new Environment.Function("multiply", "multiply", Arrays.asList(Environment.Type.INTEGER, Environment.Type.INTEGER), Environment.Type.INTEGER, args -> Environment.NIL))
+                        ),
+                        String.join(System.lineSeparator(),
+                                "int multiply(int num1, int num2) {",
+                                "    return num1 * num2;",
+                                "}"
+                        )
+                ),
+                Arguments.of("Multiple statements",
+                        // FUN func(x: Integer, y: Decimal, z: String) DO
+                        //     print(x);
+                        //     print(y);
+                        //     print(z);
+                        // END
+                        init(
+                                new Ast.Function("func", Arrays.asList("x", "y", "z"), Arrays.asList("Integer", "Decimal", "String"), Optional.empty(), Arrays.asList(
+                                        new Ast.Statement.Expression(
+                                                init(new Ast.Expression.Function("print", Arrays.asList(
+                                                                init(new Ast.Expression.Access(Optional.empty(), "x"), ast -> ast.setVariable(new Environment.Variable("x", "x", Environment.Type.INTEGER, true, Environment.NIL)))
+                                                        )),
+                                                        ast -> ast.setFunction(new Environment.Function("print", "System.out.println", Arrays.asList(Environment.Type.ANY), Environment.Type.NIL, args -> Environment.NIL))
+                                                )
+                                        ),
+                                        new Ast.Statement.Expression(
+                                                init(new Ast.Expression.Function("print", Arrays.asList(
+                                                                init(new Ast.Expression.Access(Optional.empty(), "y"), ast -> ast.setVariable(new Environment.Variable("y", "y", Environment.Type.DECIMAL, true, Environment.NIL)))
+                                                        )),
+                                                        ast -> ast.setFunction(new Environment.Function("print", "System.out.println", Arrays.asList(Environment.Type.ANY), Environment.Type.NIL, args -> Environment.NIL))
+                                                )
+                                        ),
+                                        new Ast.Statement.Expression(
+                                                init(new Ast.Expression.Function("print", Arrays.asList(
+                                                                init(new Ast.Expression.Access(Optional.empty(), "z"), ast -> ast.setVariable(new Environment.Variable("z", "z", Environment.Type.STRING, true, Environment.NIL)))
+                                                        )),
+                                                        ast -> ast.setFunction(new Environment.Function("print", "System.out.println", Arrays.asList(Environment.Type.ANY), Environment.Type.NIL, args -> Environment.NIL))
+                                                )
+                                        )
+                                )),
+                                ast -> ast.setFunction(new Environment.Function("func", "func", Arrays.asList(Environment.Type.INTEGER, Environment.Type.DECIMAL, Environment.Type.STRING), Environment.Type.NIL, args -> Environment.NIL))
+                        ),
+                        String.join(System.lineSeparator(),
+                                "Void func(int x, double y, String z) {",
+                                "    System.out.println(x);",
+                                "    System.out.println(y);",
+                                "    System.out.println(z);",
+                                "}"
                         )
                 )
         );
@@ -340,6 +476,14 @@ public class GeneratorTests {
 
                         )), ast -> ast.setFunction(new Environment.Function("print", "System.out.println", Arrays.asList(), Environment.Type.NIL, args -> Environment.NIL))),
                         "System.out.println()"
+                ),
+                Arguments.of("Multiple arguments",
+                        // test(num1, num2)
+                        init(new Ast.Expression.Function("print", Arrays.asList(
+                            init(new Ast.Expression.Access(Optional.empty(), "num1"), ast -> ast.setVariable(new Environment.Variable("num1", "num1", Environment.Type.INTEGER, true, Environment.NIL))),
+                            init(new Ast.Expression.Access(Optional.empty(), "num2"), ast -> ast.setVariable(new Environment.Variable("num2", "num2", Environment.Type.INTEGER, true, Environment.NIL)))
+                        )), ast -> ast.setFunction(new Environment.Function("test", "test", Arrays.asList(), Environment.Type.NIL, args -> Environment.NIL))),
+                        "test(num1, num2)"
                 )
         );
     }
