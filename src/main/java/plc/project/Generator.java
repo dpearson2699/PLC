@@ -58,8 +58,8 @@ public final class Generator implements Ast.Visitor<Void> {
         for(Ast.Function function : ast.getFunctions()){
             newline(indent);
             print(function);
+            newline(0);
         }
-        newline(0);
 
         indent -= 1;
         newline(indent);

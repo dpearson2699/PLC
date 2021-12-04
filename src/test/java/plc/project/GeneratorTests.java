@@ -86,7 +86,12 @@ public class GeneratorTests {
                                         )
                                         ), ast -> ast.setFunction(new Environment.Function("h", "h", Arrays.asList(), Environment.Type.STRING, args -> Environment.NIL))),
 
-                                        init(new Ast.Function("main", Arrays.asList(), Arrays.asList(), Optional.of("Integer"), Arrays.asList()), ast -> ast.setFunction(new Environment.Function("main", "main", Arrays.asList(), Environment.Type.INTEGER, args -> Environment.NIL))))
+                                        init(new Ast.Function("main", Arrays.asList(), Arrays.asList(), Optional.of("Integer"), Arrays.asList(
+                                                new Ast.Statement.Expression(init(new Ast.Expression.Function("print", Arrays.asList(
+                                                        init(new Ast.Expression.Literal("Hello, World!"), ast -> ast.setType(Environment.Type.STRING))
+                                                )), ast -> ast.setFunction(new Environment.Function("print", "System.out.println", Arrays.asList(Environment.Type.ANY), Environment.Type.NIL, args -> Environment.NIL)))),
+                                                new Ast.Statement.Return(init(new Ast.Expression.Literal(BigInteger.ZERO), ast -> ast.setType(Environment.Type.INTEGER)))
+                                        )), ast -> ast.setFunction(new Environment.Function("main", "main", Arrays.asList(), Environment.Type.INTEGER, args -> Environment.NIL))))
                         ),
                         String.join(System.lineSeparator(),
                                 "public class Main {",
@@ -100,7 +105,17 @@ public class GeneratorTests {
                                 "    }",
                                 "",
                                 "    int f() {",
-                                "        ",
+                                "        return x;",
+                                "    }",
+                                "",
+                                "    double g() {",
+                                "        return y;",
+                                "    }",
+                                "",
+                                "    String h() {",
+                                "        return z;",
+                                "    }",
+                                "",
                                 "    int main() {",
                                 "        System.out.println(\"Hello, World!\");",
                                 "        return 0;",
