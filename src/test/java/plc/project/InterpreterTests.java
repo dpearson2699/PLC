@@ -452,6 +452,14 @@ final class InterpreterTests {
                         ),
                         true
                 ),
+                // undefined && TRUE
+                Arguments.of("And (Short Circuit)",
+                        new Ast.Expression.Binary("&&",
+                                new Ast.Expression.Literal(false),
+                                new Ast.Expression.Access(Optional.empty(), "undefined")
+                        ),
+                        false
+                ),
                 // 1 < 10
                 Arguments.of("Less Than",
                         new Ast.Expression.Binary("<",
@@ -617,6 +625,13 @@ final class InterpreterTests {
                                 new Ast.Expression.Literal(new BigInteger("3"))
                         ),
                         new BigInteger("2")
+                ),
+                Arguments.of("Divide by 0",
+                        new Ast.Expression.Binary("/",
+                                new Ast.Expression.Literal(new BigInteger("1")),
+                                new Ast.Expression.Literal(new BigInteger("0"))
+                        ),
+                        null
                 ),
                 Arguments.of("Exponent Base Integer",
                         new Ast.Expression.Binary("^",

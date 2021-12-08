@@ -68,7 +68,8 @@ public class LexerTests {
                 Arguments.of("Trailing Decimal", "1.", false),
                 Arguments.of("Leading Decimal", ".5000", false),
                 Arguments.of("Too many Leading 0", "00000.00000000001000000", false),
-                Arguments.of("Multiple Decimal Points", "0..01", false)
+                Arguments.of("Multiple Decimal Points", "0..01", false),
+                Arguments.of("Double Decimal", "1..0", false)
         );
     }
 
