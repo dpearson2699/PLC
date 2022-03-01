@@ -4,6 +4,23 @@ This	course	will	discuss	how	programming	languages	are	constructed	and	analyze	t
 existing	languages.		Topics	included	are:		lexical	analysis,	scanning,	programmatic	semantics,	code	generation,	and	
 different	types	of	programming	languages.
 
+## Part 1: Lexer
+The lexer works through three main functions:
+ 
+ - lex(), which repeatedly calls lexToken() and skips whitespace
+ - lexToken(), which lexes the next token
+ - CharStream, which manages the state of the lexer and literals
+ 
+If the lexer fails to parse something (such as an unterminated string) a ParseException is thrown with an index at the character which is invalid.
+## Part 2: Parser
+The parser takes the sequence of tokens emitted by the lexer and turns that into a structured representation of the program, called the Abstract Syntax Tree (AST).
+## Part 3: Interpreter
+
+## Part 4: Analyzer
+
+## Part 5: Generator
+
+
 ## Parser Grammar
 source ::= global* function*
 
